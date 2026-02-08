@@ -1,0 +1,70 @@
+/* Styles pour les nouvelles fonctionnalités */
+.vote-time-info {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
+    padding: 20px;
+    border-radius: var(--border-radius);
+    margin-bottom: 25px;
+    border-left: 5px solid #4cc9f0;
+}
+
+.vote-time-info h3 {
+    color: #0c5460;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.vote-active {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.vote-inactive {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.candidate-votes {
+    background: #f8f9fa;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 5px;
+}
+
+.candidate-votes i {
+    color: #4361ee;
+}
+
+.results-footer {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 2px solid #e9ecef;
+    text-align: center;
+    color: var(--gray);
+    font-size: 0.9rem;
+}
+
+.alert-success {
+    background: #d4edda;
+    border-left: 4px solid #28a745;
+    color: #155724;
+}
+
+#period-info {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 15px;
+}
+
+#period-info p {
+    margin: 5px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}

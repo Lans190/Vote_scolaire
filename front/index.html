@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vote des Professeurs - Élection Délégués</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Overlay de chargement -->
+    <div id="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p class="loading-text">Chargement de l'élection...</p>
+    </div>
+
+    <!-- Interface Principale -->
+    <div id="app" class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1><i class="fas fa-chalkboard-teacher"></i> Vote des Professeurs</h1>
+                <p class="subtitle">Élection des délégués élèves 2024</p>
+                <div class="header-info">
+                    <p><i class="fas fa-database"></i> Base : PostgreSQL • vote</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Contenu principal -->
+        <main class="main-content">
+            <!-- Section Accueil -->
+            <section id="home-section" class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-vote-yea"></i> Élection en cours</h2>
+                    <div class="admin-actions">
+                        <button id="share-link-btn" class="btn-share">
+                            <i class="fas fa-share-alt"></i> Partager le vote
+                        </button>
+                        <button id="view-results-btn" class="btn-secondary">
+                            <i class="fas fa-chart-bar"></i> Voir les résultats
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="election-info-card">
+                    <h3><i class="fas fa-info-circle"></i> Instructions</h3>
+                    <p>En tant que professeur, vous votez pour élire les délégués élèves de chaque classe :</p>
+                    <ul>
+                        <li><i class="fas fa-check-circle"></i> 1 vote par professeur</li>
+                        <li><i class="fas fa-check-circle"></i> Vérification par email académique</li>
+                        <li><i class="fas fa-check-circle"></i> Vote anonyme et sécurisé</li>
+                        <li><i class="fas fa-check-circle"></i> 5 candidates (une par niveau)</li>
+                    </ul>
+                    
+                    <div class="vote-stats" id="home-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-users"></i>
+                            <span>5 Candidates</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-vote-yea"></i>
+                            <span id="vote-count">0 votes</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-percentage"></i>
+                            <span id="participation-rate">0% participation</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="start-vote-section">
+                    <h3><i class="fas fa-play-circle"></i> Commencer à voter</h3>
+                    <p>Cliquez sur le bouton ci-dessous pour accéder au bulletin de vote.</p>
+                    <button id="start-vote-btn" class="btn-primary btn-large">
+                        <i class="fas fa-vote-yea"></i> Accéder au bulletin de vote
+                    </button>
+                    
+                    <div class="direct-link-info">
+                        <p><i class="fas fa-link"></i> <strong>Lien direct pour les professeurs :</strong></p>
+                        <div class="link-container">
+                            <code id="direct-link">Chargement...</code>
+                            <button id="copy-direct-link" class="btn-copy">
+                                <i class="fas fa-copy"></i> Copier
+                            </button>
+                        </div>
+                        <p class="link-hint">Partagez ce lien avec les autres professeurs</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section Vote -->
+            <section id="vote-section" class="section" style="display: none;">
+                <div class="section-header">
+                    <h2><i class="fas fa-ballot"></i> Bulletin de vote</h2>
+                    <button id="back-button" class="back-button">
+                        <i class="fas fa-arrow-left"></i> Retour
+                    </button>
+                </div>
+                
+                <div class="vote-instructions">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <div>
+                            <p><strong>Important :</strong> Vous ne pouvez voter qu'une seule fois. Votre vote est anonyme.</p>
+                            <p><small>Vérification par email académique requis</small></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="vote-content">
+                    <!-- Contenu dynamique -->
+                </div>
+            </section>
+
+            <!-- Section Résultats -->
+            <section id="results-section" class="section" style="display: none;">
+                <div class="section-header">
+                    <h2><i class="fas fa-chart-bar"></i> Résultats du vote</h2>
+                    <button id="back-from-results" class="back-button">
+                        <i class="fas fa-arrow-left"></i> Retour
+                    </button>
+                </div>
+                
+                <div id="results-content">
+                    <!-- Résultats dynamiques -->
+                </div>
+            </section>
+
+            <!-- Section Confirmation -->
+            <section id="confirmation-section" class="section" style="display: none;">
+                <div class="confirmation-card">
+                    <div class="confirmation-icon success">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h2>Vote enregistré !</h2>
+                    <p class="confirmation-message">Merci d'avoir participé à l'élection des délégués.</p>
+                    
+                    <div id="vote-details" class="confirmation-details">
+                        <!-- Détails dynamiques -->
+                    </div>
+                    
+                    <div class="confirmation-actions">
+                        <button id="return-home" class="btn-primary">
+                            <i class="fas fa-home"></i> Retour à l'accueil
+                        </button>
+                        <button id="view-results-confirm" class="btn-secondary">
+                            <i class="fas fa-chart-bar"></i> Voir les résultats
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div class="footer-content">
+                <p>Système de vote réservé aux professeurs - Établissement Scolaire 2024</p>
+                <p class="footer-info">
+                    <i class="fas fa-database"></i> PostgreSQL • vote | 
+                    <i class="fas fa-lock"></i> Email académique requis | 
+                    <i class="fas fa-clock"></i> Vote ouvert jusqu'au 31/12/2024
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modal email -->
+    <div id="email-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-envelope"></i> Vérification professeur</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>Veuillez entrer votre adresse email académique :</p>
+                <input type="email" id="email-input" placeholder="prenom.nom@etablissement.fr" class="email-input">
+                <p class="email-hint">Exemple : marie.dupont@college.fr ou jean.martin@lycee.fr</p>
+                <div id="email-error" class="error-message" style="display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancel-email" class="btn-secondary">Annuler</button>
+                <button id="submit-email" class="btn-primary">Vérifier et voter</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal partage -->
+    <div id="share-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-share-alt"></i> Partager le vote</h3>
+                <span class="close-share-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>Envoyez ce lien aux professeurs pour qu'ils puissent voter directement :</p>
+                <div class="share-link-container">
+                    <input type="text" id="share-link-input" readonly class="share-link-input">
+                    <button id="copy-share-link" class="btn-copy">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+                <div class="share-options">
+                    <p>Partager via :</p>
+                    <div class="share-buttons">
+                        <button class="share-btn email" onclick="shareViaEmail()">
+                            <i class="fas fa-envelope"></i> Email
+                        </button>
+                        <button class="share-btn whatsapp" onclick="shareViaWhatsApp()">
+                            <i class="fab fa-whatsapp"></i> WhatsApp
+                        </button>
+                        <button class="share-btn teams" onclick="shareViaTeams()">
+                            <i class="fas fa-users"></i> Teams
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="notification">
+        <span id="notification-text"></span>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

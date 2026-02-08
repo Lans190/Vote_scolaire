@@ -1,0 +1,11 @@
+{
+  "name": "vote-scolaire-frontend",
+  "version": "1.0.0",
+  "description": "Interface de vote scolaire",
+  "scripts": {
+    "start": "live-server --port=3000"
+  },
+  "dependencies": {
+    "live-server": "^1.2.2"
+  }
+}
