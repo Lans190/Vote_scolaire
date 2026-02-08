@@ -1,5 +1,14 @@
-// Configuration
-const API_BASE_URL = 'http://localhost:5000/api';
+// ==================== CONFIGURATION POUR RENDER ====================
+const isLocal = window.location.hostname === 'localhost' || 
+                window.location.hostname === '127.0.0.1';
+
+const API_BASE_URL = isLocal 
+    ? 'http://localhost:5000/api' 
+    : 'https://vote-backend.onrender.com/api';
+
+console.log(`🌐 Environnement: ${isLocal ? 'Local' : 'Production'}`);
+console.log(`🔗 API URL: ${API_BASE_URL}`);
+
 let currentElection = null;
 let selectedCandidate = null;
 let userEmail = null;
@@ -106,7 +115,10 @@ function updateElectionTimer() {
 async function loadHomeStats() {
     try {
         const response = await fetch(`${API_BASE_URL}/stats`);
-        if (!response.ok) return;
+        if (!response.ok) {
+            console.log('API non disponible, vérifiez la connexion');
+            return;
+        }
         
         const data = await response.json();
         
@@ -140,7 +152,12 @@ function startVoting() {
     
     // Charger l'élection
     fetch(`${API_BASE_URL}/election`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(data => {
             currentElection = data;
             
@@ -164,7 +181,7 @@ function startVoting() {
         })
         .catch(error => {
             console.error('Erreur chargement élection:', error);
-            showNotification('Erreur de chargement de l\'élection', 'error');
+            showNotification(`Erreur: ${error.message}`, 'error');
             hideLoading();
         });
 }
@@ -284,9 +301,16 @@ async function verifyAndVote() {
     try {
         const response = await fetch(`${API_BASE_URL}/verify-email`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
             body: JSON.stringify({ email })
         });
+        
+        if (!response.ok) {
+            throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+        }
         
         const data = await response.json();
         
@@ -310,7 +334,7 @@ async function verifyAndVote() {
         
     } catch (error) {
         console.error('Erreur vérification email:', error);
-        emailError.textContent = 'Erreur de vérification, veuillez réessayer';
+        emailError.textContent = `Erreur de vérification: ${error.message}`;
         emailError.style.display = 'block';
     }
 }
@@ -349,7 +373,7 @@ async function submitVote() {
         
     } catch (error) {
         console.error('Erreur vote:', error);
-        showNotification(error.message, 'error');
+        showNotification(`Erreur: ${error.message}`, 'error');
         showHome();
     } finally {
         hideLoading();
@@ -384,6 +408,10 @@ async function showResults() {
     
     try {
         const response = await fetch(`${API_BASE_URL}/results`);
+        if (!response.ok) {
+            throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+        }
+        
         const data = await response.json();
         
         document.getElementById('home-section').style.display = 'none';
@@ -395,7 +423,7 @@ async function showResults() {
         
     } catch (error) {
         console.error('Erreur chargement résultats:', error);
-        showNotification('Erreur de chargement des résultats', 'error');
+        showNotification(`Erreur: ${error.message}`, 'error');
     } finally {
         hideLoading();
     }
@@ -496,19 +524,19 @@ function copyShareLink() {
 function shareViaEmail() {
     const link = document.getElementById('share-link-input').value;
     const subject = encodeURIComponent('Vote des délégués élèves');
-    const body = encodeURIComponent(`Bonjour,\n\nVous pouvez voter pour les délégués élèves via ce lien :\n${link}\n\nPériode de vote : Aujourd'hui 10h GMT - Mardi 23h59 GMT\n\nCordialement,`);
+    const body = encodeURIComponent(`Bonjour,\n\nVous pouvez voter pour les délégués élèves via ce lien :\n${link}\n\nPériode de vote : 8-10 février 2026\n\nCordialement,`);
     window.open(`mailto:?subject=${subject}&body=${body}`);
 }
 
 function shareViaWhatsApp() {
     const link = document.getElementById('share-link-input').value;
-    const text = encodeURIComponent(`Vote des délégués élèves\nLien: ${link}\nPériode: Aujourd'hui 10h GMT - Mardi 23h59 GMT`);
+    const text = encodeURIComponent(`Vote des délégués élèves\nLien: ${link}\nPériode: 8-10 février 2026`);
     window.open(`https://wa.me/?text=${text}`);
 }
 
 function shareViaTeams() {
     const link = document.getElementById('share-link-input').value;
-    const text = encodeURIComponent(`Vote des délégués élèves\n\nLien: ${link}\n\nPériode de vote:\n• Début: Aujourd'hui 10h GMT\n• Fin: Mardi 23h59 GMT\n\nUn seul vote par professeur`);
+    const text = encodeURIComponent(`Vote des délégués élèves\n\nLien: ${link}\n\nPériode de vote:\n• Début: 8 février 2026\n• Fin: 10 février 2026\n\nUn seul vote par professeur`);
     window.open(`https://teams.microsoft.com/share?text=${text}`);
 }
 
@@ -544,6 +572,10 @@ function handlePopState() {
 async function loadElectionForVote() {
     try {
         const response = await fetch(`${API_BASE_URL}/election`);
+        if (!response.ok) {
+            throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+        }
+        
         currentElection = await response.json();
         
         showVoteInterface();
@@ -551,7 +583,7 @@ async function loadElectionForVote() {
         
     } catch (error) {
         console.error('Erreur chargement élection directe:', error);
-        showNotification('Erreur de chargement de l\'élection', 'error');
+        showNotification(`Erreur: ${error.message}`, 'error');
         showHome();
     }
 }
@@ -567,12 +599,16 @@ function showNotification(message, type = 'info') {
     // Changer la couleur selon le type
     if (type === 'error') {
         notification.style.background = '#f72585';
+        notification.style.color = 'white';
     } else if (type === 'success') {
         notification.style.background = '#4cc9f0';
+        notification.style.color = 'white';
     } else if (type === 'warning') {
         notification.style.background = '#f39c12';
+        notification.style.color = 'black';
     } else {
         notification.style.background = '#4361ee';
+        notification.style.color = 'white';
     }
     
     notification.classList.add('show');
@@ -583,11 +619,13 @@ function showNotification(message, type = 'info') {
 }
 
 function showLoading() {
-    document.getElementById('loading').style.display = 'flex';
+    const loading = document.getElementById('loading');
+    if (loading) loading.style.display = 'flex';
 }
 
 function hideLoading() {
-    document.getElementById('loading').style.display = 'none';
+    const loading = document.getElementById('loading');
+    if (loading) loading.style.display = 'none';
 }
 
 function copyToClipboard(text, message) {
@@ -604,3 +642,27 @@ function copyToClipboard(text, message) {
             showNotification(message, 'success');
         });
 }
+
+// Version alternative pour le débogage
+function testConnection() {
+    console.log('🔗 Test de connexion à l\'API...');
+    fetch(`${API_BASE_URL}/status`)
+        .then(response => {
+            console.log('Status:', response.status);
+            if (response.ok) {
+                return response.json();
+            }
+            throw new Error(`HTTP ${response.status}`);
+        })
+        .then(data => {
+            console.log('✅ API connectée:', data);
+            showNotification('✅ Connecté à l\'API', 'success');
+        })
+        .catch(error => {
+            console.error('❌ API non accessible:', error);
+            showNotification('❌ API non accessible', 'error');
+        });
+}
+
+// Tester la connexion au chargement
+setTimeout(testConnection, 1000);
