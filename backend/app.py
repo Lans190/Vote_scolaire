@@ -154,7 +154,7 @@ def index():
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Système de Vote Scolaire 2026</title>
+            <title>Système de Vote Scolaire 2026 - Cours privés Source de la Fontaine</title>
             <style>
                 body { font-family: Arial, sans-serif; margin: 40px; text-align: center; }
                 h1 { color: #4361ee; }
@@ -165,7 +165,8 @@ def index():
             </style>
         </head>
         <body>
-            <h1>🚀 Système de Vote Scolaire 2026</h1>
+            <h1>🗳️ Système de Vote Scolaire 2026</h1>
+            <h2>Cours privés "Source de la Fontaine"</h2>
             <div class="status info">
                 <h2>API Backend Opérationnelle</h2>
                 <p>Le serveur Flask fonctionne correctement.</p>
@@ -175,9 +176,8 @@ def index():
                 <h3>📡 API Disponible</h3>
                 <p><a href="/api/status">/api/status</a> - Statut du système</p>
                 <p><a href="/api/election">/api/election</a> - Élection active</p>
-                <p><a href="/api/results">/api/results</a> - Résultats</p>
             </div>
-            <p>© 2026 - Système de Vote Scolaire</p>
+            <p>© 2026 - Cours privés Source de la Fontaine - Tous droits réservés</p>
         </body>
         </html>
         '''
@@ -192,22 +192,23 @@ def serve_frontend(path):
 
 @app.route('/api/')
 def api_docs():
-    """Documentation de l'API"""
+    """Documentation de l'API (version admin)"""
     return '''
     <!DOCTYPE html>
     <html>
     <head>
-        <title>API Vote Scolaire 2026 - Documentation</title>
+        <title>API Vote Scolaire 2026 - Documentation Admin</title>
         <style>
             body { font-family: Arial, sans-serif; margin: 40px; }
             h1 { color: #333; }
             .endpoint { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
             code { background: #eee; padding: 2px 5px; }
             a { color: #4361ee; text-decoration: none; }
+            .admin { background: #fff3cd; border-left: 4px solid #ffc107; }
         </style>
     </head>
     <body>
-        <h1>🗳️ API Vote Scolaire 2026</h1>
+        <h1>🗳️ API Vote Scolaire 2026 - Cours privés Source de la Fontaine</h1>
         <p><a href="/">← Retour à l'application</a></p>
         
         <div class="endpoint">
@@ -217,7 +218,19 @@ def api_docs():
         
         <div class="endpoint">
             <h3>GET <code>/api/election</code></h3>
-            <p>Récupère l'élection active avec les candidats</p>
+            <p>Récupère l'élection active avec les candidats (sans résultats)</p>
+        </div>
+        
+        <div class="endpoint admin">
+            <h3>GET <code>/api/results</code></h3>
+            <p><strong>ADMIN ONLY</strong> - Résultats complets du vote</p>
+            <p><em>Requiert le paramètre admin_secret</em></p>
+        </div>
+        
+        <div class="endpoint admin">
+            <h3>GET <code>/api/stats</code></h3>
+            <p><strong>ADMIN ONLY</strong> - Statistiques détaillées</p>
+            <p><em>Requiert le paramètre admin_secret</em></p>
         </div>
         
         <div class="endpoint">
@@ -227,24 +240,14 @@ def api_docs():
         </div>
         
         <div class="endpoint">
-            <h3>GET <code>/api/results</code></h3>
-            <p>Résultats en temps réel</p>
-        </div>
-        
-        <div class="endpoint">
-            <h3>GET <code>/api/stats</code></h3>
-            <p>Statistiques détaillées</p>
-        </div>
-        
-        <div class="endpoint">
             <h3>POST <code>/api/verify-email</code></h3>
             <p>Vérifie si un email a déjà voté</p>
             <p>Body JSON: {"email": "email@ecole.fr"}</p>
         </div>
         
-        <div class="endpoint">
+        <div class="endpoint admin">
             <h3>POST <code>/api/reset-test</code></h3>
-            <p>Réinitialise les données de test (développement seulement)</p>
+            <p><strong>ADMIN ONLY</strong> - Réinitialise les données de test</p>
         </div>
     </body>
     </html>
@@ -261,7 +264,7 @@ def ensure_timezone(dt):
     return dt.astimezone(timezone.utc)
 
 def init_database():
-    """Initialise la base de données SQLite"""
+    """Initialise la base de données SQLite avec les nouvelles dates"""
     with app.app_context():
         try:
             print(f"🔗 Initialisation de SQLite...")
@@ -274,13 +277,13 @@ def init_database():
             election = Election.query.filter_by(statut='active').first()
             
             if not election:
-                # DATES EXACTES POUR 2026
-                date_debut = datetime(2026, 2, 8, 0, 0, 0, tzinfo=timezone.utc)
-                date_fin = datetime(2026, 2, 10, 23, 59, 59, tzinfo=timezone.utc)
+                # NOUVELLES DATES : Lundi 9 février au vendredi 13 février 2026
+                date_debut = datetime(2026, 2, 9, 0, 0, 0, tzinfo=timezone.utc)  # Lundi 9 février
+                date_fin = datetime(2026, 2, 13, 23, 59, 59, tzinfo=timezone.utc)  # Vendredi 13 février
                 
                 election = Election(
-                    titre="Élection des Délégués Élèves - Février 2026",
-                    description="Vote des professeurs pour élire les délégués élèves de chaque classe (6ème à 2nde). Période de vote : 8 au 10 février 2026.",
+                    titre="Élection des Délégués Élèves 2026 - Cours privés Source de la Fontaine",
+                    description="Vote des professeurs pour élire les délégués élèves de chaque classe. Période de vote : du lundi 9 au vendredi 13 février 2026.",
                     date_debut=date_debut,
                     date_fin=date_fin,
                     statut='active'
@@ -288,6 +291,15 @@ def init_database():
                 db.session.add(election)
                 db.session.commit()
                 print("✅ NOUVELLE ÉLECTION 2026 créée")
+                print(f"📅 Nouvelle période de vote : {date_debut.strftime('%d/%m/%Y')} au {date_fin.strftime('%d/%m/%Y')}")
+            
+            # Si élection existe, mettre à jour les dates si nécessaire
+            elif election.date_debut.year != 2026 or election.date_debut.month != 2 or election.date_debut.day != 9:
+                print("⚠️  Mise à jour des dates de l'élection...")
+                election.date_debut = datetime(2026, 2, 9, 0, 0, 0, tzinfo=timezone.utc)
+                election.date_fin = datetime(2026, 2, 13, 23, 59, 59, tzinfo=timezone.utc)
+                db.session.commit()
+                print("✅ Dates mises à jour pour 2026")
             
             candidates_count = Candidate.query.filter_by(election_id=election.id).count()
             
@@ -370,7 +382,8 @@ def get_system_status():
                 'timestamp': now.isoformat(),
                 'database': 'SQLite (fichier local)',
                 'environment': os.getenv('RENDER', 'development'),
-                'year': 2026
+                'year': 2026,
+                'ecole': 'Cours privés Source de la Fontaine'
             },
             'election': {
                 'status': status,
@@ -392,13 +405,14 @@ def get_system_status():
             'system': {
                 'status': 'online',
                 'timestamp': datetime.now(timezone.utc).isoformat(),
-                'year': 2026
+                'year': 2026,
+                'ecole': 'Cours privés Source de la Fontaine'
             }
         })
 
 @app.route('/api/election', methods=['GET'])
 def get_election():
-    """Récupère l'élection active avec vérification des dates"""
+    """Récupère l'élection active SANS résultats (pour les professeurs)"""
     try:
         election = Election.query.filter_by(statut='active').first()
         if not election:
@@ -407,7 +421,18 @@ def get_election():
         candidates = Candidate.query.filter_by(election_id=election.id).all()
         
         result = election.to_dict()
-        result['candidates'] = [c.to_dict() for c in candidates]
+        # Masquer les votes_count pour les professeurs
+        result['candidates'] = [{
+            'id': c.id,
+            'nom': c.nom,
+            'prenom': c.prenom,
+            'nom_complet': f"{c.prenom} {c.nom}",
+            'classe': c.classe,
+            'description': c.description,
+            'photo_url': c.photo_url,
+            'election_id': c.election_id
+            # NE PAS INCLURE votes_count ici
+        } for c in candidates]
         
         return jsonify(result)
     except Exception as e:
@@ -492,14 +517,14 @@ def submit_vote():
         
         print(f"✅ Vote 2026 enregistré pour {professeur_email} - Candidat: {candidate.prenom} {candidate.nom}")
         
+        # Réponse simple sans détails (le professeur ne voit pas qui il a voté)
         return jsonify({
             'success': True,
-            'message': 'Vote enregistré avec succès',
-            'vote': vote.to_dict(),
-            'candidate': candidate.to_dict(),
+            'message': 'Votre vote a été enregistré avec succès',
             'election_status': 'Vote accepté',
-            'votes_count': candidate.votes_count,
-            'year': 2026
+            'year': 2026,
+            'ecole': 'Cours privés Source de la Fontaine',
+            'note': 'Merci pour votre participation. Les résultats seront communiqués par l\'administration.'
         })
         
     except Exception as e:
@@ -509,9 +534,24 @@ def submit_vote():
         traceback.print_exc()
         return jsonify({'error': f'Erreur serveur: {str(e)}'}), 500
 
+def check_admin_access():
+    """Vérifie si la requête provient de l'admin"""
+    admin_secret = request.args.get('admin_secret')
+    expected_secret = os.getenv('ADMIN_SECRET', 'admin_vote_2026_source_fontaine')
+    
+    if admin_secret == expected_secret:
+        return True
+    return False
+
 @app.route('/api/results', methods=['GET'])
 def get_results():
-    """Récupère les résultats du vote"""
+    """Récupère les résultats du vote - ADMIN SEULEMENT"""
+    if not check_admin_access():
+        return jsonify({
+            'error': 'Accès refusé',
+            'message': 'Cette fonctionnalité est réservée à l\'administration'
+        }), 403
+    
     try:
         election = Election.query.filter_by(statut='active').first()
         if not election:
@@ -539,7 +579,9 @@ def get_results():
             'total_votes': total_votes,
             'results': results,
             'updated_at': datetime.now(timezone.utc).isoformat(),
-            'year': 2026
+            'year': 2026,
+            'ecole': 'Cours privés Source de la Fontaine',
+            'access': 'admin'
         })
     except Exception as e:
         print(f"❌ Erreur résultats: {str(e)}")
@@ -547,7 +589,13 @@ def get_results():
 
 @app.route('/api/stats', methods=['GET'])
 def get_statistics():
-    """Statistiques détaillées"""
+    """Statistiques détaillées - ADMIN SEULEMENT"""
+    if not check_admin_access():
+        return jsonify({
+            'error': 'Accès refusé',
+            'message': 'Cette fonctionnalité est réservée à l\'administration'
+        }), 403
+    
     try:
         election = Election.query.filter_by(statut='active').first()
         if not election:
@@ -575,10 +623,22 @@ def get_statistics():
             {
                 'nom': c.nom,
                 'prenom': c.prenom,
+                'nom_complet': f"{c.prenom} {c.nom}",
                 'classe': c.classe,
                 'votes': c.votes_count
             }
             for c in candidates
+        ]
+        
+        # Liste des votants
+        votes = Vote.query.filter_by(election_id=election.id).all()
+        votants = [
+            {
+                'email': v.professeur_email,
+                'date_vote': v.date_vote.isoformat() if v.date_vote else None,
+                'candidate_id': v.candidate_id
+            }
+            for v in votes
         ]
         
         return jsonify({
@@ -592,13 +652,16 @@ def get_statistics():
                 'temps_restant_heures': int(temps_restant.seconds // 3600),
                 'votes_by_candidate': votes_by_candidate
             },
+            'votants': votants,
             'periode_vote': {
                 'date_debut': election.date_debut.isoformat() if election.date_debut else None,
                 'date_fin': election.date_fin.isoformat() if election.date_fin else None,
                 'vote_actif': election.date_debut and election.date_fin and (election.date_debut <= now_utc <= election.date_fin)
             },
             'year': 2026,
-            'updated_at': now_utc.isoformat()
+            'ecole': 'Cours privés Source de la Fontaine',
+            'updated_at': now_utc.isoformat(),
+            'access': 'admin'
         })
     except Exception as e:
         print(f"❌ Erreur statistiques: {str(e)}")
@@ -637,7 +700,8 @@ def verify_email():
             'election_title': election.titre,
             'can_vote': can_vote,
             'vote_period': f"{debut.strftime('%d/%m/%Y %H:%M') if debut else 'N/A'} GMT - {fin.strftime('%d/%m/%Y %H:%M') if fin else 'N/A'} GMT",
-            'year': 2026
+            'year': 2026,
+            'ecole': 'Cours privés Source de la Fontaine'
         })
     except Exception as e:
         print(f"❌ Erreur vérification email: {str(e)}")
@@ -645,12 +709,14 @@ def verify_email():
 
 @app.route('/api/reset-test', methods=['POST'])
 def reset_test_data():
-    """Réinitialise les données de test (uniquement pour le développement)"""
+    """Réinitialise les données de test - ADMIN SEULEMENT"""
+    if not check_admin_access():
+        return jsonify({
+            'error': 'Accès refusé',
+            'message': 'Cette fonctionnalité est réservée à l\'administration'
+        }), 403
+    
     try:
-        # Vérifier que nous ne sommes pas en production
-        if os.getenv('RENDER') and 'production' in os.getenv('RENDER', '').lower():
-            return jsonify({'error': 'Cette action n\'est pas autorisée en production'}), 403
-        
         # Supprimer tous les votes
         Vote.query.delete()
         
@@ -666,7 +732,9 @@ def reset_test_data():
             'message': 'Données de test réinitialisées',
             'votes_deleted': True,
             'candidates_reset': len(candidates),
-            'year': 2026
+            'year': 2026,
+            'ecole': 'Cours privés Source de la Fontaine',
+            'access': 'admin'
         })
     except Exception as e:
         db.session.rollback()
@@ -678,6 +746,7 @@ if __name__ == '__main__':
     print("=" * 80)
     print("🚀 DÉMARRAGE DU SYSTÈME DE VOTE SCOLAIRE 2026")
     print("=" * 80)
+    print("🏫 ÉCOLE : Cours privés Source de la Fontaine")
     print("🗄️  BASE DE DONNÉES : SQLite (fichier local)")
     print("=" * 80)
     
@@ -697,14 +766,14 @@ if __name__ == '__main__':
     port = int(os.getenv('PORT', 10000))
     
     print(f"🌐 Port d'écoute: {port}")
-    print(f"📋 API Élection  : http://localhost:{port}/api/election")
-    print(f"📊 API Résultats : http://localhost:{port}/api/results")
-    print(f"📈 API Statistiques : http://localhost:{port}/api/stats")
-    print(f"⚙️  API Status    : http://localhost:{port}/api/status")
+    print(f"📋 API Élection (professeurs)  : http://localhost:{port}/api/election")
+    print(f"🔐 API Résultats (admin)       : http://localhost:{port}/api/results?admin_secret=admin_vote_2026_source_fontaine")
+    print(f"📊 API Statistiques (admin)    : http://localhost:{port}/api/stats?admin_secret=admin_vote_2026_source_fontaine")
+    print(f"⚙️  API Status                  : http://localhost:{port}/api/status")
     print("=" * 80)
     print("⏰ PÉRIODE DE VOTE 2026 :")
-    print("   Début : 8 février 2026, 00h00 GMT")
-    print("   Fin   : 10 février 2026, 23h59 GMT")
+    print("   Début : Lundi 9 février 2026, 00h00 GMT")
+    print("   Fin   : Vendredi 13 février 2026, 23h59 GMT")
     print("=" * 80)
     print("👨‍🏫 PRÊT POUR LES VOTES DES PROFESSEURS !")
     print("=" * 80)
