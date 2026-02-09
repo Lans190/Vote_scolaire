@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 import psycopg2
 import sys
 
-
 # Charger les variables d'environnement
 load_dotenv()
 
@@ -16,12 +15,12 @@ CORS(app)
 
 # Configuration PostgreSQL - Base : vote
 database_url = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/vote')
-if database_url.startswith('postgres://'):
+if database_url and database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev_secret_key_2024')
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev_secret_key_2026')  # Changé 2024 -> 2026
 
 db = SQLAlchemy(app)
 
@@ -214,8 +213,10 @@ def init_database():
     """Initialise la base de données avec les dates CORRECTES 2026"""
     with app.app_context():
         try:
+            print(f"🔗 Connexion à la base de données...")
+            print(f"📊 URL: {database_url[:50]}...")  # Afficher partiellement pour sécurité
             db.create_all()
-            print("✅ Tables créées dans la base PostgreSQL 'vote'")
+            print("✅ Tables créées avec succès")
             
             election = Election.query.filter_by(statut='active').first()
             
@@ -236,7 +237,7 @@ def init_database():
                 )
                 db.session.add(election)
                 db.session.commit()
-                print("✅ NOUVELLE ÉLECTION 2026 créée dans la base 'vote'")
+                print("✅ NOUVELLE ÉLECTION 2026 créée")
                 print(f"📅 Date de début: {date_debut}")
                 print(f"📅 Date de fin: {date_fin}")
             
@@ -284,9 +285,9 @@ def init_database():
                     db.session.add(candidate)
                 
                 db.session.commit()
-                print(f"✅ {len(candidates_data)} candidates créées dans la base 'vote'")
+                print(f"✅ {len(candidates_data)} candidates créées")
             else:
-                print(f"✅ Base 'vote' initialisée avec {candidates_count} candidates")
+                print(f"✅ Base initialisée avec {candidates_count} candidates")
                 print(f"📅 Date de début: {election.date_debut}")
                 print(f"📅 Date de fin: {election.date_fin}")
             
@@ -698,7 +699,7 @@ if __name__ == '__main__':
     print("=" * 80)
     print("🚀 DÉMARRAGE DU SYSTÈME DE VOTE SCOLAIRE 2026")
     print("=" * 80)
-    print("🗄️  BASE DE DONNÉES : PostgreSQL • vote")
+    print("🗄️  BASE DE DONNÉES : PostgreSQL")
     print("=" * 80)
     
     # Initialiser la base de données
@@ -719,5 +720,5 @@ if __name__ == '__main__':
     print("👨‍🏫 PRÊT POUR LES VOTES DES PROFESSEURS !")
     print("=" * 80)
     
-    app.run(debug=True, port=5000, host='0.0.0.0')
-    sys.modules['psycopg2'] = __import__('psycopg2-binary')
+    port = int(os.getenv('PORT', 5000))
+    app.run(debug=True, port=port, host='0.0.0.0')
