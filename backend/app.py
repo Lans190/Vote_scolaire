@@ -1,10 +1,10 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text
 from datetime import datetime, timedelta, timezone
 import os
 from dotenv import load_dotenv
-import sqlite3
 
 # Charger les variables d'environnement
 load_dotenv()
@@ -15,13 +15,6 @@ FRONTEND_PATH = os.path.join(BASE_DIR, '..', 'front')
 
 print(f"📁 Chemin frontend: {FRONTEND_PATH}")
 print(f"📁 Existe: {os.path.exists(FRONTEND_PATH)}")
-
-# Liste les fichiers si le dossier existe
-if os.path.exists(FRONTEND_PATH):
-    files = os.listdir(FRONTEND_PATH)
-    print(f"📄 Fichiers dans front/: {files[:5]}...")
-    if len(files) > 5:
-        print(f"   + {len(files) - 5} autres fichiers")
 
 app = Flask(__name__, static_folder=FRONTEND_PATH if os.path.exists(FRONTEND_PATH) else None)
 CORS(app)
@@ -43,7 +36,7 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev_secret_key_2026_vote_sco
 
 db = SQLAlchemy(app)
 
-# ==================== MODÈLES (IDENTIQUES À VOTRE CODE) ====================
+# ==================== MODÈLES ====================
 
 class Election(db.Model):
     __tablename__ = 'elections'
@@ -138,8 +131,18 @@ class Vote(db.Model):
     __table_args__ = (
         db.UniqueConstraint('election_id', 'professeur_email', name='unique_vote_per_election'),
     )
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'election_id': self.election_id,
+            'candidate_id': self.candidate_id,
+            'professeur_email': self.professeur_email,
+            'date_vote': self.date_vote.isoformat() if self.date_vote else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
 
-# ==================== ROUTES POUR LE FRONTEND (IDENTIQUES) ====================
+# ==================== ROUTES POUR LE FRONTEND ====================
 
 @app.route('/')
 def index():
@@ -319,9 +322,6 @@ def init_database():
             total_votes = Vote.query.count()
             print(f"📊 Total votes enregistrés : {total_votes}")
             
-            # Afficher le statut actuel
-            check_election_status(election)
-            
             return True
             
         except Exception as e:
@@ -330,35 +330,7 @@ def init_database():
             traceback.print_exc()
             return False
 
-def check_election_status(election):
-    """Vérifie et affiche le statut actuel de l'élection"""
-    now = datetime.now(timezone.utc)
-    
-    debut = ensure_timezone(election.date_debut)
-    fin = ensure_timezone(election.date_fin)
-    
-    if debut:
-        if now < debut:
-            diff = debut - now
-            heures = diff.seconds // 3600
-            minutes = (diff.seconds % 3600) // 60
-            print(f"⏳ L'élection débutera le: {debut.strftime('%d/%m/%Y %H:%M')} GMT")
-            print(f"   Début dans: {diff.days}j {heures}h {minutes}m")
-        else:
-            print(f"✅ L'élection a commencé le: {debut.strftime('%d/%m/%Y %H:%M')} GMT")
-    
-    if fin:
-        if now < fin:
-            diff = fin - now
-            jours = diff.days
-            heures = diff.seconds // 3600
-            minutes = (diff.seconds % 3600) // 60
-            print(f"⏰ Temps restant: {jours}j {heures}h {minutes}m")
-            print(f"   Fin prévue: {fin.strftime('%d/%m/%Y %H:%M')} GMT")
-        else:
-            print(f"⏰ L'élection est terminée depuis: {fin.strftime('%d/%m/%Y %H:%M')} GMT")
-
-# ==================== ROUTES API (IDENTIQUES) ====================
+# ==================== ROUTES API ====================
 
 @app.route('/api/status', methods=['GET'])
 def get_system_status():
@@ -384,6 +356,13 @@ def get_system_status():
                     status = "pending"
                 else:
                     status = "finished"
+        
+        # Tester la connexion à la base de données
+        db_status = "connected"
+        try:
+            db.session.execute(text("SELECT 1"))
+        except Exception as e:
+            db_status = f"error: {str(e)[:50]}..."
         
         return jsonify({
             'system': {
@@ -442,6 +421,8 @@ def submit_vote():
         data = request.json
         if not data:
             return jsonify({'error': 'Données JSON requises'}), 400
+        
+        print(f"📥 Données reçues: {data}")
         
         professeur_email = data.get('professeur_email')
         candidate_id = data.get('candidate_id')
@@ -509,6 +490,8 @@ def submit_vote():
         db.session.add(vote)
         db.session.commit()
         
+        print(f"✅ Vote 2026 enregistré pour {professeur_email} - Candidat: {candidate.prenom} {candidate.nom}")
+        
         return jsonify({
             'success': True,
             'message': 'Vote enregistré avec succès',
@@ -522,6 +505,8 @@ def submit_vote():
     except Exception as e:
         db.session.rollback()
         print(f"❌ Erreur lors du vote: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': f'Erreur serveur: {str(e)}'}), 500
 
 @app.route('/api/results', methods=['GET'])
@@ -584,6 +569,18 @@ def get_statistics():
             Vote.election_id == election.id
         ).count()
         
+        # Votes par candidat
+        candidates = Candidate.query.filter_by(election_id=election.id).all()
+        votes_by_candidate = [
+            {
+                'nom': c.nom,
+                'prenom': c.prenom,
+                'classe': c.classe,
+                'votes': c.votes_count
+            }
+            for c in candidates
+        ]
+        
         return jsonify({
             'election': election.to_dict(),
             'statistics': {
@@ -592,7 +589,8 @@ def get_statistics():
                 'votes_last_24h': last_24h,
                 'participation_rate': round((total_votes / 50 * 100), 2) if total_votes > 0 else 0,
                 'temps_restant_jours': temps_restant.days,
-                'temps_restant_heures': int(temps_restant.seconds // 3600)
+                'temps_restant_heures': int(temps_restant.seconds // 3600),
+                'votes_by_candidate': votes_by_candidate
             },
             'periode_vote': {
                 'date_debut': election.date_debut.isoformat() if election.date_debut else None,
@@ -686,8 +684,10 @@ if __name__ == '__main__':
     # Initialiser la base de données
     db_initialized = init_database()
     
-    if not db_initialized:
-        print("❌ ATTENTION: Base de données non initialisée correctement")
+    if db_initialized:
+        print("✅ Base de données initialisée avec succès")
+    else:
+        print("❌ Base de données non initialisée correctement")
         print("💡 L'application démarrera mais certaines fonctionnalités pourraient ne pas fonctionner")
     
     print("=" * 80)
