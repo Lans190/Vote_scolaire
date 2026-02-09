@@ -4,27 +4,42 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta, timezone
 import os
 from dotenv import load_dotenv
-
 import sys
 
 # Charger les variables d'environnement
 load_dotenv()
 
-app = Flask(__name__, static_folder='../front')
+# Chemins - ADAPTÉ POUR RENDER
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FRONTEND_PATH = os.path.join(BASE_DIR, '..', 'front')
+
+print(f"📁 Chemin frontend: {FRONTEND_PATH}")
+print(f"📁 Existe: {os.path.exists(FRONTEND_PATH)}")
+
+# Liste les fichiers si le dossier existe
+if os.path.exists(FRONTEND_PATH):
+    print(f"📄 Fichiers dans front/: {os.listdir(FRONTEND_PATH)[:5]}...")
+
+app = Flask(__name__, static_folder=FRONTEND_PATH if os.path.exists(FRONTEND_PATH) else None)
 CORS(app)
 
-# Configuration PostgreSQL - Base : vote
+# Configuration PostgreSQL
 database_url = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/vote')
-if database_url and database_url.startswith('postgres://'):
+
+if database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
+
+# Correction spécifique pour Render
+if database_url and '-a/' in database_url and ':5432' not in database_url:
+    database_url = database_url.replace('-a/', '-a:5432/')
+
+print(f"🔗 URL DB: {database_url[:50]}...")  # Afficher partiellement pour sécurité
 
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev_secret_key_2026')  # Changé 2024 -> 2026
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev_secret_key_2026')
 
 db = SQLAlchemy(app)
-
-# ==================== MODÈLES ====================
 
 class Election(db.Model):
     __tablename__ = 'elections'
