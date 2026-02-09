@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text  # AJOUT IMPORTANT
 from datetime import datetime, timedelta, timezone
 import os
 from dotenv import load_dotenv
@@ -366,7 +367,7 @@ def init_database():
             
             # Test de connexion simple d'abord
             try:
-                result = db.session.execute('SELECT 1')
+                result = db.session.execute(text('SELECT 1'))
                 print("✅ Connexion SSL réussie (test SELECT 1)")
             except Exception as test_error:
                 print(f"❌ Échec test connexion: {test_error}")
