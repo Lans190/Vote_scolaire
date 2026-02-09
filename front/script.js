@@ -1,668 +1,526 @@
-// ==================== CONFIGURATION POUR RENDER ====================
-const isLocal = window.location.hostname === 'localhost' || 
-                window.location.hostname === '127.0.0.1';
+// Configuration de l'API
+const API_BASE_URL = window.location.origin;
+const API_ENDPOINTS = {
+    election: `${API_BASE_URL}/api/election`,
+    vote: `${API_BASE_URL}/api/vote`,
+    results: `${API_BASE_URL}/api/results`,
+    stats: `${API_BASE_URL}/api/stats`,
+    status: `${API_BASE_URL}/api/status`,
+    verifyEmail: `${API_BASE_URL}/api/verify-email`
+};
 
-const API_BASE_URL = isLocal 
-    ? 'http://localhost:5000/api' 
-    : 'https://vote-backend.onrender.com/api';
-
-console.log(`🌐 Environnement: ${isLocal ? 'Local' : 'Production'}`);
-console.log(`🔗 API URL: ${API_BASE_URL}`);
-
+// Variables globales
 let currentElection = null;
+let candidates = [];
 let selectedCandidate = null;
 let userEmail = null;
+let hasVoted = false;
+let electionStatus = '';
+
+// Éléments DOM
+const elements = {
+    electionInfo: document.getElementById('electionInfo'),
+    statusBanner: document.getElementById('statusBanner'),
+    statusMessage: document.getElementById('statusMessage'),
+    timeRemaining: document.getElementById('timeRemaining'),
+    votesCount: document.getElementById('votesCount'),
+    emailSection: document.getElementById('emailSection'),
+    candidatesSection: document.getElementById('candidatesSection'),
+    resultsSection: document.getElementById('resultsSection'),
+    alreadyVotedSection: document.getElementById('alreadyVotedSection'),
+    emailInput: document.getElementById('emailInput'),
+    verifyBtn: document.getElementById('verifyBtn'),
+    candidatesGrid: document.getElementById('candidatesGrid'),
+    selectedCandidate: document.getElementById('selectedCandidate'),
+    selectedInfo: document.getElementById('selectedInfo'),
+    voteBtn: document.getElementById('voteBtn'),
+    totalVotes: document.getElementById('totalVotes'),
+    participationRate: document.getElementById('participationRate'),
+    timeLeft: document.getElementById('timeLeft'),
+    resultsList: document.getElementById('resultsList'),
+    confirmationModal: document.getElementById('confirmationModal'),
+    successModal: document.getElementById('successModal'),
+    confirmCandidate: document.getElementById('confirmCandidate')
+};
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 Application de vote scolaire démarrée');
-    initApp();
-    setupEventListeners();
-    loadHomeStats();
-    updateDirectLink();
-    updateElectionTimer();
+    loadElectionData();
+    updateClock();
+    setInterval(updateClock, 60000); // Mettre à jour l'horloge chaque minute
 });
 
-function initApp() {
-    // Vérifier les paramètres d'URL pour le lien direct
-    const urlParams = new URLSearchParams(window.location.search);
-    const voteId = urlParams.get('vote');
-    
-    if (voteId) {
-        // Mode lien direct : charger directement l'élection
-        showLoading();
-        loadElectionForVote();
-    } else {
-        // Mode normal : charger les données de base
-        loadHomeStats();
-    }
-    
-    hideLoading();
-}
-
-function setupEventListeners() {
-    // Boutons principaux
-    document.getElementById('start-vote-btn').addEventListener('click', startVoting);
-    document.getElementById('share-link-btn').addEventListener('click', showShareModal);
-    document.getElementById('view-results-btn').addEventListener('click', showResults);
-    document.getElementById('view-results-confirm').addEventListener('click', showResults);
-    
-    // Navigation
-    document.getElementById('back-button').addEventListener('click', showHome);
-    document.getElementById('back-from-results').addEventListener('click', showHome);
-    document.getElementById('return-home').addEventListener('click', showHome);
-    
-    // Email modal
-    document.querySelector('.close-modal').addEventListener('click', hideEmailModal);
-    document.getElementById('cancel-email').addEventListener('click', hideEmailModal);
-    document.getElementById('submit-email').addEventListener('click', verifyAndVote);
-    document.getElementById('email-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') verifyAndVote();
-    });
-    
-    // Partage modal
-    document.querySelector('.close-share-modal').addEventListener('click', hideShareModal);
-    document.getElementById('copy-direct-link').addEventListener('click', copyDirectLink);
-    document.getElementById('copy-share-link').addEventListener('click', copyShareLink);
-    
-    // Gestion historique navigateur
-    window.addEventListener('popstate', handlePopState);
-}
-
-// ==================== TIMER ÉLECTION ====================
-
-function updateElectionTimer() {
-    // Mettre à jour le timer toutes les minutes
-    setInterval(() => {
-        if (currentElection && currentElection.temps_restant) {
-            document.getElementById('time-remaining').textContent = currentElection.temps_restant;
-        }
-    }, 60000);
-    
-    // Charger les infos de l'élection
-    fetch(`${API_BASE_URL}/election`)
-        .then(response => response.json())
-        .then(data => {
-            currentElection = data;
-            
-            // Mettre à jour les infos de temps
-            const timeInfo = document.getElementById('election-time-info');
-            if (timeInfo) {
-                if (data.can_vote) {
-                    timeInfo.innerHTML = `
-                        <p><i class="fas fa-clock"></i> <strong>Temps restant :</strong> 
-                        <span id="time-remaining">${data.temps_restant || 'Calcul...'}</span></p>
-                        <p><i class="fas fa-calendar"></i> <strong>Fin des votes :</strong> 
-                        ${new Date(data.date_fin).toLocaleString('fr-FR')} GMT</p>
-                    `;
-                } else if (data.status === 'pending') {
-                    timeInfo.innerHTML = `
-                        <p><i class="fas fa-hourglass-start"></i> <strong>Début des votes :</strong> 
-                        ${new Date(data.date_debut).toLocaleString('fr-FR')} GMT</p>
-                    `;
-                } else {
-                    timeInfo.innerHTML = `
-                        <p><i class="fas fa-flag-checkered"></i> <strong>Élection terminée</strong></p>
-                    `;
-                }
-            }
-        })
-        .catch(error => console.log('Info temps non disponible:', error));
-}
-
-// ==================== FONCTIONS PRINCIPALES ====================
-
-async function loadHomeStats() {
+// Charger les données de l'élection
+async function loadElectionData() {
     try {
-        const response = await fetch(`${API_BASE_URL}/stats`);
-        if (!response.ok) {
-            console.log('API non disponible, vérifiez la connexion');
+        const response = await fetch(API_ENDPOINTS.status);
+        const data = await response.json();
+        
+        if (data.error) {
+            showError(data.error);
             return;
         }
         
-        const data = await response.json();
+        currentElection = data.election;
+        electionStatus = data.election.status;
         
-        // Mettre à jour les statistiques
-        document.getElementById('vote-count').textContent = `${data.statistics.total_votes} votes`;
-        document.getElementById('participation-rate').textContent = `${data.statistics.participation_rate}% participation`;
+        // Mettre à jour l'interface
+        updateElectionDisplay(data);
         
-        // Mettre à jour les infos de période
-        const periodInfo = document.getElementById('period-info');
-        if (periodInfo && data.periode_vote) {
-            const debut = new Date(data.periode_vote.date_debut);
-            const fin = new Date(data.periode_vote.date_fin);
-            
-            periodInfo.innerHTML = `
-                <p><i class="fas fa-play-circle"></i> <strong>Début :</strong> ${debut.toLocaleString('fr-FR')} GMT</p>
-                <p><i class="fas fa-stop-circle"></i> <strong>Fin :</strong> ${fin.toLocaleString('fr-FR')} GMT</p>
-                ${data.periode_vote.vote_actif ? 
-                    '<p class="vote-active"><i class="fas fa-check-circle"></i> <strong>Votes actifs</strong></p>' :
-                    '<p class="vote-inactive"><i class="fas fa-times-circle"></i> <strong>Votes fermés</strong></p>'
-                }
-            `;
+        // Charger les candidats si l'élection est active
+        if (electionStatus === 'active') {
+            await loadCandidates();
         }
         
     } catch (error) {
-        console.log('Statistiques non disponibles:', error);
+        console.error('Erreur de chargement:', error);
+        showError('Impossible de se connecter au serveur');
     }
 }
 
-function startVoting() {
-    showLoading();
+// Mettre à jour l'affichage de l'élection
+function updateElectionDisplay(data) {
+    const election = data.election;
+    const stats = data.statistics;
     
-    // Charger l'élection
-    fetch(`${API_BASE_URL}/election`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`Erreur ${response.status}: ${response.statusText}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            currentElection = data;
-            
-            // Vérifier si les votes sont actifs
-            if (!data.can_vote) {
-                let message = '';
-                if (data.status === 'pending') {
-                    message = `Les votes commencent le ${new Date(data.date_debut).toLocaleString('fr-FR')} GMT`;
-                } else {
-                    message = `Les votes sont terminés depuis le ${new Date(data.date_fin).toLocaleString('fr-FR')} GMT`;
-                }
-                
-                showNotification(message, 'warning');
-                hideLoading();
-                return;
-            }
-            
-            showVoteInterface();
-            displayCandidates();
-            hideLoading();
-        })
-        .catch(error => {
-            console.error('Erreur chargement élection:', error);
-            showNotification(`Erreur: ${error.message}`, 'error');
-            hideLoading();
-        });
-}
-
-function showVoteInterface() {
-    document.getElementById('home-section').style.display = 'none';
-    document.getElementById('vote-section').style.display = 'block';
-    document.getElementById('results-section').style.display = 'none';
-    document.getElementById('confirmation-section').style.display = 'none';
-    
-    // Mettre à jour l'URL pour le partage
-    const newUrl = `${window.location.pathname}?vote=${currentElection.id}`;
-    window.history.pushState({}, '', newUrl);
-}
-
-function displayCandidates() {
-    const voteContent = document.getElementById('vote-content');
-    
-    if (!currentElection || !currentElection.candidates) {
-        voteContent.innerHTML = '<p class="error">Aucune candidate disponible</p>';
-        return;
+    // Mettre à jour les informations
+    if (elements.timeRemaining) {
+        elements.timeRemaining.textContent = election.temps_restant || '--';
     }
     
-    // Afficher les infos de temps
-    voteContent.innerHTML = `
-        <div class="vote-time-info">
-            <h3><i class="fas fa-clock"></i> Période de vote</h3>
-            <p><strong>Début :</strong> ${new Date(currentElection.date_debut).toLocaleString('fr-FR')} GMT</p>
-            <p><strong>Fin :</strong> ${new Date(currentElection.date_fin).toLocaleString('fr-FR')} GMT</p>
-            <p><strong>Temps restant :</strong> ${currentElection.temps_restant || ''}</p>
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i>
-                <p><strong>Important :</strong> Un seul vote par professeur. Vérification par email académique.</p>
-            </div>
-        </div>
+    if (elements.votesCount) {
+        elements.votesCount.textContent = stats.votes || 0;
+    }
+    
+    // Mettre à jour la bannière de statut
+    let statusText = '';
+    let statusColor = '#4361ee';
+    
+    switch (election.status) {
+        case 'active':
+            statusText = `Élection en cours • ${election.temps_restant} restant`;
+            statusColor = '#4cc9f0';
+            break;
+        case 'pending':
+            statusText = `Élection débutera le ${formatDate(election.date_debut)}`;
+            statusColor = '#f72585';
+            break;
+        case 'finished':
+            statusText = 'Élection terminée • Résultats disponibles';
+            statusColor = '#7209b7';
+            break;
+        default:
+            statusText = 'Statut inconnu';
+    }
+    
+    if (elements.statusMessage) {
+        elements.statusMessage.textContent = statusText;
+    }
+    
+    if (elements.statusBanner) {
+        elements.statusBanner.style.borderLeftColor = statusColor;
+    }
+}
+
+// Charger les candidats
+async function loadCandidates() {
+    try {
+        const response = await fetch(API_ENDPOINTS.election);
+        const data = await response.json();
         
-        <h3><i class="fas fa-female"></i> Candidates :</h3>
-        <p class="section-subtitle">Sélectionnez la candidate de votre choix</p>
+        if (data.error) {
+            showError(data.error);
+            return;
+        }
         
-        <div id="candidates-container" class="candidates-grid">
-            ${currentElection.candidates.map((candidate, index) => `
-                <div class="candidate-card" data-id="${candidate.id}">
-                    <div class="candidate-header">
-                        <img src="${candidate.photo_url || `https://ui-avatars.com/api/?name=${candidate.prenom}+${candidate.nom}&background=4361ee&color=fff&size=100`}" 
-                             alt="${candidate.prenom} ${candidate.nom}" 
-                             class="candidate-photo">
-                        <div class="candidate-info">
-                            <h4 class="candidate-name">${candidate.prenom} ${candidate.nom}</h4>
-                            <span class="candidate-class">Classe de ${candidate.classe}</span>
-                            <div class="candidate-votes">
-                                <i class="fas fa-vote-yea"></i> ${candidate.votes_count} votes
-                            </div>
-                        </div>
-                    </div>
-                    <p class="candidate-description">"${candidate.description}"</p>
-                    <div class="select-indicator">
-                        <i class="fas fa-check"></i>
-                    </div>
+        candidates = data.candidates || [];
+        currentElection = data;
+        
+        // Afficher les candidats
+        displayCandidates(candidates);
+        
+    } catch (error) {
+        console.error('Erreur chargement candidats:', error);
+        showError('Impossible de charger les candidats');
+    }
+}
+
+// Afficher les candidats
+function displayCandidates(candidatesList) {
+    if (!elements.candidatesGrid) return;
+    
+    elements.candidatesGrid.innerHTML = '';
+    
+    candidatesList.forEach(candidate => {
+        const card = document.createElement('div');
+        card.className = 'candidate-card';
+        card.dataset.id = candidate.id;
+        
+        const initials = getInitials(candidate.prenom, candidate.nom);
+        
+        card.innerHTML = `
+            <div class="candidate-header">
+                <div class="candidate-photo" style="background: ${getRandomColor()}">
+                    ${initials}
                 </div>
-            `).join('')}
-        </div>
+                <div class="candidate-info">
+                    <h3>${candidate.prenom} ${candidate.nom}</h3>
+                    <div class="candidate-class">${candidate.classe}</div>
+                </div>
+            </div>
+            <div class="candidate-description">
+                ${candidate.description || 'Pas de description disponible.'}
+            </div>
+            <div class="candidate-votes">
+                <span>${candidate.votes_count || 0} votes</span>
+                <button class="select-btn" onclick="selectCandidate(${candidate.id})">
+                    <i class="fas fa-check"></i> Sélectionner
+                </button>
+            </div>
+        `;
         
-        <div class="vote-actions">
-            <button class="btn-secondary" onclick="showHome()">
-                <i class="fas fa-times"></i> Annuler
-            </button>
-            <button id="confirm-vote-btn" class="btn-primary" onclick="showEmailModal()" disabled>
-                <i class="fas fa-check"></i> Confirmer mon vote
-            </button>
-        </div>
-    `;
-    
-    // Ajouter les événements de sélection
-    const candidatesContainer = document.getElementById('candidates-container');
-    const confirmBtn = document.getElementById('confirm-vote-btn');
-    
-    candidatesContainer.querySelectorAll('.candidate-card').forEach(card => {
-        card.addEventListener('click', () => {
-            // Désélectionner toutes les cartes
-            candidatesContainer.querySelectorAll('.candidate-card').forEach(c => {
-                c.classList.remove('selected');
-            });
-            
-            // Sélectionner cette carte
-            card.classList.add('selected');
-            selectedCandidate = parseInt(card.dataset.id);
-            confirmBtn.disabled = false;
-        });
+        card.onclick = (e) => {
+            if (!e.target.closest('.select-btn')) {
+                selectCandidate(candidate.id);
+            }
+        };
+        
+        elements.candidatesGrid.appendChild(card);
     });
 }
 
-// ==================== VOTE ====================
-
-function showEmailModal() {
-    document.getElementById('email-modal').style.display = 'flex';
-    document.getElementById('email-input').value = '';
-    document.getElementById('email-error').style.display = 'none';
-    document.getElementById('email-input').focus();
-}
-
-function hideEmailModal() {
-    document.getElementById('email-modal').style.display = 'none';
-}
-
-async function verifyAndVote() {
-    const email = document.getElementById('email-input').value.trim();
-    const emailError = document.getElementById('email-error');
+// Vérifier l'email
+async function verifyEmail() {
+    const email = elements.emailInput.value.trim();
     
-    // Validation basique
-    if (!email || !email.includes('@')) {
-        emailError.textContent = 'Veuillez entrer une adresse email académique valide';
-        emailError.style.display = 'block';
+    if (!email || !validateEmail(email)) {
+        showError('Veuillez entrer un email professionnel valide');
         return;
     }
     
-    // Vérifier si l'email a déjà voté
+    userEmail = email;
+    
+    // Désactiver le bouton pendant la vérification
+    elements.verifyBtn.disabled = true;
+    elements.verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Vérification...';
+    
     try {
-        const response = await fetch(`${API_BASE_URL}/verify-email`, {
+        const response = await fetch(API_ENDPOINTS.verifyEmail, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
+            headers: {
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ email })
+            body: JSON.stringify({ email: email })
         });
-        
-        if (!response.ok) {
-            throw new Error(`Erreur ${response.status}: ${response.statusText}`);
-        }
         
         const data = await response.json();
         
-        if (data.has_voted) {
-            emailError.textContent = 'Cet email a déjà voté pour cette élection';
-            emailError.style.display = 'block';
+        if (data.error) {
+            showError(data.error);
+            elements.verifyBtn.disabled = false;
+            elements.verifyBtn.innerHTML = '<i class="fas fa-check"></i> Vérifier';
             return;
         }
         
-        // Vérifier si l'élection est active
-        if (!data.can_vote) {
-            emailError.textContent = `Les votes ne sont pas actifs. ${data.vote_period}`;
-            emailError.style.display = 'block';
-            return;
-        }
+        hasVoted = data.has_voted;
         
-        // Si tout est OK, soumettre le vote
-        userEmail = email;
-        hideEmailModal();
-        submitVote();
+        if (hasVoted) {
+            // L'utilisateur a déjà voté
+            showAlreadyVoted();
+        } else {
+            // L'utilisateur peut voter
+            if (data.can_vote) {
+                showCandidatesSection();
+            } else {
+                showError('Le vote n\'est pas encore ouvert ou est terminé');
+            }
+        }
         
     } catch (error) {
         console.error('Erreur vérification email:', error);
-        emailError.textContent = `Erreur de vérification: ${error.message}`;
-        emailError.style.display = 'block';
+        showError('Erreur de connexion au serveur');
+    } finally {
+        elements.verifyBtn.disabled = false;
+        elements.verifyBtn.innerHTML = '<i class="fas fa-check"></i> Vérifier';
     }
 }
 
-async function submitVote() {
-    showLoading();
+// Sélectionner une candidate
+function selectCandidate(candidateId) {
+    // Retirer la sélection précédente
+    document.querySelectorAll('.candidate-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    
+    // Ajouter la nouvelle sélection
+    const selectedCard = document.querySelector(`.candidate-card[data-id="${candidateId}"]`);
+    if (selectedCard) {
+        selectedCard.classList.add('selected');
+    }
+    
+    // Trouver la candidate
+    selectedCandidate = candidates.find(c => c.id === candidateId);
+    
+    if (selectedCandidate) {
+        // Afficher les informations de sélection
+        elements.selectedInfo.innerHTML = `
+            <div class="candidate-header">
+                <div class="candidate-photo" style="background: ${getRandomColor()}">
+                    ${getInitials(selectedCandidate.prenom, selectedCandidate.nom)}
+                </div>
+                <div class="candidate-info">
+                    <h3>${selectedCandidate.prenom} ${selectedCandidate.nom}</h3>
+                    <div class="candidate-class">${selectedCandidate.classe}</div>
+                </div>
+            </div>
+            <div class="candidate-description">
+                ${selectedCandidate.description || 'Pas de description disponible.'}
+            </div>
+        `;
+        
+        // Afficher la section de confirmation
+        elements.selectedCandidate.style.display = 'block';
+        
+        // Scroll vers la section
+        elements.selectedCandidate.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+// Soumettre le vote
+function submitVote() {
+    if (!selectedCandidate || !userEmail) {
+        showError('Veuillez sélectionner une candidate et vérifier votre email');
+        return;
+    }
+    
+    // Afficher la modal de confirmation
+    elements.confirmCandidate.innerHTML = `
+        <div class="candidate-header">
+            <div class="candidate-photo" style="background: ${getRandomColor()}">
+                ${getInitials(selectedCandidate.prenom, selectedCandidate.nom)}
+            </div>
+            <div class="candidate-info">
+                <h3>${selectedCandidate.prenom} ${selectedCandidate.nom}</h3>
+                <div class="candidate-class">${selectedCandidate.classe}</div>
+            </div>
+        </div>
+        <p><strong>Email :</strong> ${userEmail}</p>
+    `;
+    
+    elements.confirmationModal.style.display = 'flex';
+}
+
+// Confirmer le vote (appelé depuis la modal)
+async function confirmVote() {
+    hideModal();
+    
+    // Désactiver le bouton
+    elements.voteBtn.disabled = true;
+    elements.voteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...';
     
     try {
-        const voteData = {
-            professeur_email: userEmail,
-            candidate_id: selectedCandidate
-        };
-        
-        console.log('📤 Envoi vote:', voteData);
-        
-        const response = await fetch(`${API_BASE_URL}/vote`, {
+        const response = await fetch(API_ENDPOINTS.vote, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
+            headers: {
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify(voteData)
+            body: JSON.stringify({
+                professeur_email: userEmail,
+                candidate_id: selectedCandidate.id
+            })
         });
         
         const data = await response.json();
         
-        if (!response.ok) {
-            // Afficher l'erreur détaillée
-            const errorMsg = data.error || 'Erreur lors du vote';
-            throw new Error(errorMsg);
+        if (data.error) {
+            showError(data.error);
+            elements.voteBtn.disabled = false;
+            elements.voteBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Confirmer mon vote';
+            return;
         }
         
         // Succès !
-        showConfirmation(data);
-        loadHomeStats(); // Mettre à jour les stats
+        showSuccessModal();
+        hasVoted = true;
+        
+        // Recharger les données
+        setTimeout(() => {
+            loadElectionData();
+            showAlreadyVoted();
+        }, 3000);
         
     } catch (error) {
-        console.error('Erreur vote:', error);
-        showNotification(`Erreur: ${error.message}`, 'error');
-        showHome();
-    } finally {
-        hideLoading();
+        console.error('Erreur envoi vote:', error);
+        showError('Erreur d\'envoi du vote');
+        elements.voteBtn.disabled = false;
+        elements.voteBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Confirmer mon vote';
     }
 }
 
-function showConfirmation(voteData) {
-    const candidate = currentElection.candidates.find(c => c.id === selectedCandidate);
-    
-    document.getElementById('home-section').style.display = 'none';
-    document.getElementById('vote-section').style.display = 'none';
-    document.getElementById('results-section').style.display = 'none';
-    document.getElementById('confirmation-section').style.display = 'block';
-    
-    document.getElementById('vote-details').innerHTML = `
-        <p><i class="fas fa-user-check"></i> <strong>Votre choix :</strong> ${candidate.prenom} ${candidate.nom}</p>
-        <p><i class="fas fa-graduation-cap"></i> <strong>Classe :</strong> ${candidate.classe}</p>
-        <p><i class="fas fa-envelope"></i> <strong>Email vérifié :</strong> ${userEmail}</p>
-        <p><i class="fas fa-clock"></i> <strong>Heure du vote :</strong> ${new Date().toLocaleString('fr-FR')}</p>
-        <p><i class="fas fa-vote-yea"></i> <strong>Total votes pour cette candidate :</strong> ${candidate.votes_count}</p>
-    `;
-    
-    // Nettoyer l'URL
-    window.history.replaceState({}, '', window.location.pathname);
-    showNotification('✅ Vote enregistré avec succès !', 'success');
-}
-
-// ==================== RÉSULTATS ====================
-
+// Afficher les résultats
 async function showResults() {
-    showLoading();
-    
     try {
-        const response = await fetch(`${API_BASE_URL}/results`);
-        if (!response.ok) {
-            throw new Error(`Erreur ${response.status}: ${response.statusText}`);
-        }
-        
+        const response = await fetch(API_ENDPOINTS.results);
         const data = await response.json();
         
-        document.getElementById('home-section').style.display = 'none';
-        document.getElementById('vote-section').style.display = 'none';
-        document.getElementById('confirmation-section').style.display = 'none';
-        document.getElementById('results-section').style.display = 'block';
+        if (data.error) {
+            showError(data.error);
+            return;
+        }
         
-        displayResults(data);
+        // Mettre à jour les statistiques
+        if (elements.totalVotes) {
+            elements.totalVotes.textContent = data.total_votes || 0;
+        }
+        
+        if (elements.participationRate) {
+            const rate = data.results.length > 0 ? 
+                Math.round(data.total_votes / 50 * 100) : 0;
+            elements.participationRate.textContent = `${rate}%`;
+        }
+        
+        if (elements.timeLeft && currentElection) {
+            elements.timeLeft.textContent = currentElection.temps_restant || '--';
+        }
+        
+        // Afficher les résultats
+        displayResults(data.results);
+        
+        // Afficher la section résultats
+        hideAllSections();
+        elements.resultsSection.style.display = 'block';
         
     } catch (error) {
         console.error('Erreur chargement résultats:', error);
-        showNotification(`Erreur: ${error.message}`, 'error');
-    } finally {
-        hideLoading();
+        showError('Impossible de charger les résultats');
     }
 }
 
-function displayResults(data) {
-    const resultsContent = document.getElementById('results-content');
+// Afficher les résultats
+function displayResults(results) {
+    if (!elements.resultsList) return;
     
-    resultsContent.innerHTML = `
-        <div class="results-container">
-            <div class="results-header">
-                <h3>Résultats de l'élection</h3>
-                <p>${currentElection ? currentElection.titre : data.election.titre}</p>
-                ${data.is_finished ? 
-                    '<div class="alert alert-success"><i class="fas fa-flag-checkered"></i> Élection terminée</div>' :
-                    '<div class="alert alert-info"><i class="fas fa-clock"></i> Résultats en temps réel</div>'
-                }
-            </div>
-            
-            <div class="results-stats">
-                <div class="result-stat">
-                    <span class="result-stat-value">${data.total_votes}</span>
-                    <span class="result-stat-label">Votes totaux</span>
-                </div>
-                <div class="result-stat">
-                    <span class="result-stat-value">${data.results.length}</span>
-                    <span class="result-stat-label">Candidates</span>
-                </div>
-                <div class="result-stat">
-                    <span class="result-stat-value">${data.total_votes > 0 ? Math.round((data.total_votes / 50) * 100) : 0}%</span>
-                    <span class="result-stat-label">Participation</span>
+    elements.resultsList.innerHTML = '';
+    
+    results.forEach((result, index) => {
+        const item = document.createElement('div');
+        item.className = 'result-item';
+        
+        item.innerHTML = `
+            <div class="result-info">
+                <div class="result-rank">${index + 1}</div>
+                <div class="result-name">
+                    <h4>${result.candidate.nom_complet}</h4>
+                    <div class="result-class">${result.candidate.classe}</div>
                 </div>
             </div>
-            
-            <div class="results-list">
-                ${data.results.map((result, index) => `
-                    <div class="result-item ${index === 0 ? 'winner' : ''}">
-                        <div class="result-rank">${index + 1}</div>
-                        <div class="result-details">
-                            <div class="result-name">${result.candidate.nom_complet}</div>
-                            <div class="result-class">Classe de ${result.candidate.classe}</div>
-                            <div class="result-description">${result.candidate.description}</div>
-                        </div>
-                        <div class="result-bar-container">
-                            <div class="result-bar">
-                                <div class="result-bar-fill" style="width: ${result.percentage}%"></div>
-                            </div>
-                            <div class="result-numbers">
-                                <span>${result.votes} votes</span>
-                                <span>${result.percentage}%</span>
-                            </div>
-                        </div>
-                    </div>
-                `).join('')}
+            <div class="result-bar">
+                <div class="bar-fill" style="width: ${Math.min(result.percentage, 100)}%"></div>
             </div>
-            
-            <div class="results-footer">
-                <p><i class="fas fa-database"></i> Données en temps réel depuis PostgreSQL</p>
-                <p><i class="fas fa-calendar"></i> Période de vote : ${new Date(data.election.date_debut).toLocaleString('fr-FR')} GMT - ${new Date(data.election.date_fin).toLocaleString('fr-FR')} GMT</p>
-                <p><small>Mis à jour : ${new Date().toLocaleString('fr-FR')}</small></p>
+            <div class="result-numbers">
+                <div class="result-votes">${result.votes} votes</div>
+                <div class="result-percentage">${result.percentage.toFixed(1)}%</div>
             </div>
-        </div>
-    `;
+        `;
+        
+        elements.resultsList.appendChild(item);
+    });
 }
 
-// ==================== PARTAGE ====================
-
-function updateDirectLink() {
-    const baseUrl = window.location.origin + window.location.pathname;
-    const voteUrl = currentElection ? `${baseUrl}?vote=${currentElection.id}` : baseUrl;
-    
-    const directLink = document.getElementById('direct-link');
-    const shareLinkInput = document.getElementById('share-link-input');
-    
-    if (directLink) directLink.textContent = voteUrl;
-    if (shareLinkInput) shareLinkInput.value = voteUrl;
+// Afficher la section des candidats
+function showCandidatesSection() {
+    hideAllSections();
+    elements.candidatesSection.style.display = 'block';
 }
 
-function showShareModal() {
-    updateDirectLink();
-    document.getElementById('share-modal').style.display = 'flex';
+// Afficher la section "déjà voté"
+function showAlreadyVoted() {
+    hideAllSections();
+    elements.alreadyVotedSection.style.display = 'block';
 }
 
-function hideShareModal() {
-    document.getElementById('share-modal').style.display = 'none';
+// Cacher toutes les sections
+function hideAllSections() {
+    elements.emailSection.style.display = 'none';
+    elements.candidatesSection.style.display = 'none';
+    elements.resultsSection.style.display = 'none';
+    elements.alreadyVotedSection.style.display = 'none';
 }
 
-function copyDirectLink() {
-    const link = document.getElementById('direct-link').textContent;
-    copyToClipboard(link, 'Lien copié !');
+// Cacher la modal
+function hideModal() {
+    elements.confirmationModal.style.display = 'none';
 }
 
-function copyShareLink() {
-    const link = document.getElementById('share-link-input').value;
-    copyToClipboard(link, 'Lien copié dans le presse-papier !');
+// Cacher la modal de succès
+function hideSuccessModal() {
+    elements.successModal.style.display = 'none';
 }
 
-function shareViaEmail() {
-    const link = document.getElementById('share-link-input').value;
-    const subject = encodeURIComponent('Vote des délégués élèves');
-    const body = encodeURIComponent(`Bonjour,\n\nVous pouvez voter pour les délégués élèves via ce lien :\n${link}\n\nPériode de vote : 8-10 février 2026\n\nCordialement,`);
-    window.open(`mailto:?subject=${subject}&body=${body}`);
+// Afficher la modal de succès
+function showSuccessModal() {
+    elements.successModal.style.display = 'flex';
 }
 
-function shareViaWhatsApp() {
-    const link = document.getElementById('share-link-input').value;
-    const text = encodeURIComponent(`Vote des délégués élèves\nLien: ${link}\nPériode: 8-10 février 2026`);
-    window.open(`https://wa.me/?text=${text}`);
-}
-
-function shareViaTeams() {
-    const link = document.getElementById('share-link-input').value;
-    const text = encodeURIComponent(`Vote des délégués élèves\n\nLien: ${link}\n\nPériode de vote:\n• Début: 8 février 2026\n• Fin: 10 février 2026\n\nUn seul vote par professeur`);
-    window.open(`https://teams.microsoft.com/share?text=${text}`);
-}
-
-// ==================== NAVIGATION ====================
-
-function showHome() {
-    document.getElementById('home-section').style.display = 'block';
-    document.getElementById('vote-section').style.display = 'none';
-    document.getElementById('results-section').style.display = 'none';
-    document.getElementById('confirmation-section').style.display = 'none';
-    
-    selectedCandidate = null;
-    userEmail = null;
-    
-    // Nettoyer l'URL
-    window.history.replaceState({}, '', window.location.pathname);
-    loadHomeStats(); // Recharger les stats
-}
-
-function handlePopState() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const voteId = urlParams.get('vote');
-    
-    if (voteId && currentElection) {
-        showVoteInterface();
-    } else {
-        showHome();
+// Actualiser les données
+function refreshData() {
+    loadElectionData();
+    if (hasVoted) {
+        showResults();
     }
 }
 
-// ==================== LIEN DIRECT ====================
-
-async function loadElectionForVote() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/election`);
-        if (!response.ok) {
-            throw new Error(`Erreur ${response.status}: ${response.statusText}`);
-        }
-        
-        currentElection = await response.json();
-        
-        showVoteInterface();
-        displayCandidates();
-        
-    } catch (error) {
-        console.error('Erreur chargement élection directe:', error);
-        showNotification(`Erreur: ${error.message}`, 'error');
-        showHome();
+// Mettre à jour l'horloge
+function updateClock() {
+    if (elements.timeRemaining && currentElection && currentElection.temps_restant) {
+        elements.timeRemaining.textContent = currentElection.temps_restant;
     }
 }
 
-// ==================== UTILITAIRES ====================
-
-function showNotification(message, type = 'info') {
-    const notification = document.getElementById('notification');
-    const notificationText = document.getElementById('notification-text');
-    
-    notificationText.textContent = message;
-    
-    // Changer la couleur selon le type
-    if (type === 'error') {
-        notification.style.background = '#f72585';
-        notification.style.color = 'white';
-    } else if (type === 'success') {
-        notification.style.background = '#4cc9f0';
-        notification.style.color = 'white';
-    } else if (type === 'warning') {
-        notification.style.background = '#f39c12';
-        notification.style.color = 'black';
-    } else {
-        notification.style.background = '#4361ee';
-        notification.style.color = 'white';
-    }
-    
-    notification.classList.add('show');
-    
-    setTimeout(() => {
-        notification.classList.remove('show');
-    }, 3000);
+// Fonctions utilitaires
+function validateEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
 }
 
-function showLoading() {
-    const loading = document.getElementById('loading');
-    if (loading) loading.style.display = 'flex';
+function getInitials(firstName, lastName) {
+    return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
 }
 
-function hideLoading() {
-    const loading = document.getElementById('loading');
-    if (loading) loading.style.display = 'none';
+function getRandomColor() {
+    const colors = [
+        'linear-gradient(135deg, #4361ee, #3a0ca3)',
+        'linear-gradient(135deg, #4cc9f0, #3a86ff)',
+        'linear-gradient(135deg, #7209b7, #560bad)',
+        'linear-gradient(135deg, #f72585, #b5179e)',
+        'linear-gradient(135deg, #4895ef, #4361ee)'
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
 }
 
-function copyToClipboard(text, message) {
-    navigator.clipboard.writeText(text)
-        .then(() => showNotification(message, 'success'))
-        .catch(() => {
-            // Fallback pour anciens navigateurs
-            const tempInput = document.createElement('input');
-            tempInput.value = text;
-            document.body.appendChild(tempInput);
-            tempInput.select();
-            document.execCommand('copy');
-            document.body.removeChild(tempInput);
-            showNotification(message, 'success');
-        });
+function formatDate(dateString) {
+    if (!dateString) return '--';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
 
-// Version alternative pour le débogage
-function testConnection() {
-    console.log('🔗 Test de connexion à l\'API...');
-    fetch(`${API_BASE_URL}/status`)
-        .then(response => {
-            console.log('Status:', response.status);
-            if (response.ok) {
-                return response.json();
-            }
-            throw new Error(`HTTP ${response.status}`);
-        })
-        .then(data => {
-            console.log('✅ API connectée:', data);
-            showNotification('✅ Connecté à l\'API', 'success');
-        })
-        .catch(error => {
-            console.error('❌ API non accessible:', error);
-            showNotification('❌ API non accessible', 'error');
-        });
+function showError(message) {
+    // Simple affichage d'erreur
+    alert(`Erreur : ${message}`);
 }
 
-// Tester la connexion au chargement
-setTimeout(testConnection, 1000);
+// Exposer les fonctions au scope global
+window.verifyEmail = verifyEmail;
+window.selectCandidate = selectCandidate;
+window.submitVote = submitVote;
+window.confirmVote = confirmVote;
+window.showResults = showResults;
+window.hideModal = hideModal;
+window.hideSuccessModal = hideSuccessModal;
+window.refreshData = refreshData;
