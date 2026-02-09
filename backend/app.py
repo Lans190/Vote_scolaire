@@ -4,7 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta, timezone
 import os
 from dotenv import load_dotenv
-import psycopg2
+
 import sys
 
 # Charger les variables d'environnement
