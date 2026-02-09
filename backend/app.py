@@ -42,15 +42,17 @@ def fix_database_url_for_render(db_url):
     
     # CORRECTION SPÉCIFIQUE POUR RENDER : Ajout du domaine .render.com
     # Cherche le pattern dpg-xxxxxxx-a
-    if 'dpg-' in db_url and '-a' in db_url and 'render.com' not in db_url:
+    if 'dpg-' in db_url and '-a' in db_url:
         parts = db_url.split('@')
         if len(parts) == 2:
             host_part = parts[1].split('/')[0]
-            if host_part.endswith('-a') and ':' not in host_part:
-                # Ajouter .render.com et le port
-                corrected_host = f"{host_part}.render.com:5432"
+            # Ajouter .frankfurt-postgres.render.com si manquant
+            if 'frankfurt-postgres.render.com' not in host_part:
+                corrected_host = f"{host_part}.frankfurt-postgres.render.com"
+                if ':' not in corrected_host:
+                    corrected_host += ':5432'
                 db_url = db_url.replace(f"@{host_part}", f"@{corrected_host}")
-                print(f"✅ URL corrigée pour Render: {db_url[:70]}...")
+                print(f"✅ URL corrigée pour Render Frankfurt: {db_url[:70]}...")
     
     # Vérifier qu'il y a bien un port
     if '@' in db_url and ':' not in db_url.split('@')[1].split('/')[0]:
@@ -79,44 +81,27 @@ def test_database_connection(db_url):
             except socket.gaierror as dns_error:
                 print(f"❌ Échec DNS: {host_part}")
                 print(f"   Erreur: {dns_error}")
-                
-                # Essayer avec différentes variations
-                variations = [
-                    host_part,
-                    f"{host_part}.render.com",
-                    host_part.replace('-a.', '-a.'),
-                ]
-                
-                for variation in variations:
-                    try:
-                        ip = socket.gethostbyname(variation)
-                        print(f"✅ Variation réussie: {variation} → {ip}")
-                        return True
-                    except:
-                        continue
-                
                 return False
     except Exception as e:
         print(f"❌ Erreur lors du test de connexion: {e}")
         return False
 
-# Obtenir et corriger l'URL de la base de données
-database_url = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/vote')
+# URL CORRECTE POUR RENDER FRANKFURT
+# NOTEZ : e0n9nn0 (ZÉRO après le e) et non eo9nn0 (lettre o)
+DATABASE_URL_CORRECTE = "postgresql://vote_user:sVZxXHKa3RfuRfS2SkcSJUuIJ8C0KMpF@dpg-d64t7q24d50c73e0n9nn0-a.frankfurt-postgres.render.com:5432/vote_vq45"
 
-# URL spécifique fournie - À UTILISER SI LA VARIABLE D'ENVIRONNEMENT N'EST PAS DÉFINIE
-if 'postgresql://' not in database_url or 'localhost' in database_url:
-    # Utiliser l'URL fournie
-    provided_url = "postgresql://vote_user:sVZxXHKa3RfuRfS2SkcSJUuIJ8C0KMpF@dpg-d64t7q24d50c73eo9nn0-a.render.com/vote_vq45"
-    print(f"⚠️  Utilisation de l'URL fournie car DATABASE_URL n'est pas configurée")
-    database_url = provided_url
+print(f"🔗 URL correcte configurée: {DATABASE_URL_CORRECTE[:70]}...")
 
-# Corriger l'URL pour Render
-original_url = database_url
+# Obtenir l'URL de l'environnement ou utiliser l'URL corrigée
+database_url = os.getenv('DATABASE_URL', DATABASE_URL_CORRECTE)
+
+# Si l'URL contient une erreur (eo9nn0 au lieu de e0n9nn0), la corriger
+if 'eo9nn0' in database_url:
+    print("⚠️  Correction de l'erreur dans le nom d'hôte (eo9nn0 → e0n9nn0)")
+    database_url = database_url.replace('eo9nn0', 'e0n9nn0')
+
+# Corriger l'URL pour Render si nécessaire
 database_url = fix_database_url_for_render(database_url)
-
-if database_url != original_url:
-    print(f"📝 URL originale: {original_url[:60]}...")
-    print(f"🔧 URL corrigée: {database_url[:60]}...")
 
 # Tester la connexion avant de configurer Flask
 print("🔍 Test de connexion à la base de données...")
@@ -124,10 +109,9 @@ if test_database_connection(database_url):
     print("✅ Test de connexion réussi")
 else:
     print("❌ Test de connexion échoué")
-    print("💡 Vérifiez que:")
-    print("   1. La base de données PostgreSQL existe sur Render")
-    print("   2. Le nom d'hôte est correct (doit finir par .render.com)")
-    print("   3. Les identifiants sont valides")
+    print(f"💡 URL testée: {database_url[:80]}...")
+    print("Essayez de tester manuellement avec:")
+    print(f"  telnet dpg-d64t7q24d50c73e0n9nn0-a.frankfurt-postgres.render.com 5432")
 
 # Configuration Flask
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
