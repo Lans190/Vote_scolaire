@@ -3,519 +3,286 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Système de vote électronique pour l'élection des délégués élèves 2026">
-    <meta name="keywords" content="vote, élection, délégués, scolaire, 2026, professeurs">
-    <meta name="author" content="Cours privés Source de la Fontaine">
-    <title>Vote Scolaire 2026 - Élection des Délégués</title>
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="https://ui-avatars.com/api/?name=CSF&background=4361ee&color=fff">
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=CSF&background=4361ee&color=fff&size=180">
-    
-    <!-- Stylesheets -->
+    <title>Administration - Vote Scolaire 2026</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#4361ee">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://vote-scolaire.onrender.com/">
-    <meta property="og:title" content="Vote Scolaire 2026 - Cours privés Source de la Fontaine">
-    <meta property="og:description" content="Système de vote électronique pour l'élection des délégués élèves">
-    <meta property="og:image" content="https://ui-avatars.com/api/?name=Vote+2026&background=4361ee&color=fff&size=1200">
-    
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://vote-scolaire.onrender.com/">
-    <meta property="twitter:title" content="Vote Scolaire 2026 - Cours privés Source de la Fontaine">
-    <meta property="twitter:description" content="Système de vote électronique pour l'élection des délégués élèves">
-    <meta property="twitter:image" content="https://ui-avatars.com/api/?name=Vote+2026&background=4361ee&color=fff&size=1200">
-    
-    <!-- Preload Resources -->
-    <link rel="preload" href="style.css" as="style">
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <style>
+        .admin-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        
+        .admin-header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stat-card h3 {
+            font-size: 2.5em;
+            color: #4361ee;
+            margin-bottom: 10px;
+        }
+        
+        .results-table {
+            width: 100%;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .results-table th {
+            background: #4361ee;
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+        
+        .results-table td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .results-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .winner-badge {
+            background: #2ecc71;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+        
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .export-btn {
+            background: #4361ee;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .export-btn:hover {
+            background: #3a0ca3;
+        }
+        
+        .admin-warning {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Skip to main content for accessibility -->
-        <a href="#main-content" class="skip-link">Aller au contenu principal</a>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1><i class="fas fa-lock"></i> Administration - Vote Scolaire 2026</h1>
+            <p>Cours privés Source de la Fontaine • Accès réservé</p>
+        </div>
         
-        <!-- En-tête -->
-        <header class="header" role="banner">
-            <div class="logo">
-                <i class="fas fa-vote-yea" aria-hidden="true"></i>
-                <div>
-                    <h1>Vote Scolaire 2026</h1>
-                    <p class="school-name">Cours privés Source de la Fontaine</p>
-                </div>
-            </div>
-            
-            <div class="election-info" id="electionInfo" aria-live="polite">
-                <p>
-                    <i class="fas fa-clock" aria-hidden="true"></i>
-                    <span id="timeRemaining">Chargement...</span>
-                    <span class="sr-only">Temps restant avant la fin du vote</span>
-                </p>
-                <p>
-                    <i class="fas fa-users" aria-hidden="true"></i>
-                    <span id="votesCount">0</span> votes
-                    <span class="sr-only">Nombre total de votes</span>
-                </p>
-            </div>
-        </header>
-
-        <!-- Bannière de statut -->
-        <div class="status-banner" id="statusBanner" role="status" aria-live="polite">
-            <i class="fas fa-info-circle" aria-hidden="true"></i>
-            <span id="statusMessage">Chargement de l'élection...</span>
+        <div class="admin-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Accès restreint :</strong> Cette page est réservée à l'administration.
         </div>
-
-        <!-- Contenu principal -->
-        <main id="main-content" role="main">
-            <!-- Section de vérification email -->
-            <section class="email-section" id="emailSection">
-                <h2>
-                    <i class="fas fa-envelope" aria-hidden="true"></i>
-                    Vérification du vote
-                </h2>
-                
-                <p class="section-description">
-                    Veuillez entrer votre email professionnel pour vérifier votre éligibilité au vote :
-                </p>
-                
-                <form class="email-form" id="emailForm" novalidate>
-                    <div class="input-group">
-                        <label for="emailInput" class="sr-only">Email professionnel</label>
-                        <input 
-                            type="email" 
-                            id="emailInput" 
-                            name="email"
-                            placeholder="votre.email@ecole.fr"
-                            required
-                            autocomplete="email"
-                            aria-describedby="emailHelp"
-                            spellcheck="false"
-                        >
-                        <div class="input-error" id="emailError" role="alert" aria-live="assertive"></div>
-                    </div>
-                    
-                    <button type="button" onclick="verifyEmail()" id="verifyBtn" class="primary-btn">
-                        <i class="fas fa-check" aria-hidden="true"></i>
-                        <span>Vérifier</span>
-                    </button>
-                </form>
-                
-                <p class="note" role="note">
-                    <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
-                    Un seul vote par professeur est autorisé. Votre vote est anonyme et sécurisé.
-                </p>
-                
-                <div class="period-info" role="contentinfo">
-                    <i class="fas fa-calendar-alt" aria-hidden="true"></i>
-                    <span>Période de vote : Lundi 9 février au vendredi 13 février 2026</span>
-                </div>
-            </section>
-
-            <!-- Section des candidats -->
-            <section class="candidates-section" id="candidatesSection" style="display: none;" aria-hidden="true">
-                <h2>
-                    <i class="fas fa-user-graduate" aria-hidden="true"></i>
-                    Candidates 2026
-                </h2>
-                
-                <p class="section-description">
-                    Sélectionnez la candidate que vous souhaitez élire. Cliquez sur une candidate pour voir plus de détails.
-                </p>
-                
-                <!-- Filtres par classe (optionnel) -->
-                <div class="filter-controls" role="group" aria-label="Filtrer par classe">
-                    <p class="filter-label">Filtrer par classe :</p>
-                    <div class="filter-buttons">
-                        <button type="button" class="filter-btn active" onclick="filterCandidates('all')" aria-pressed="true">
-                            Toutes
-                        </button>
-                        <button type="button" class="filter-btn" onclick="filterCandidates('6ème')" aria-pressed="false">
-                            6ème
-                        </button>
-                        <button type="button" class="filter-btn" onclick="filterCandidates('5ème')" aria-pressed="false">
-                            5ème
-                        </button>
-                        <button type="button" class="filter-btn" onclick="filterCandidates('4ème')" aria-pressed="false">
-                            4ème
-                        </button>
-                        <button type="button" class="filter-btn" onclick="filterCandidates('3ème')" aria-pressed="false">
-                            3ème
-                        </button>
-                        <button type="button" class="filter-btn" onclick="filterCandidates('2nde')" aria-pressed="false">
-                            2nde
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Grille des candidats -->
-                <div class="candidates-grid" id="candidatesGrid" role="list" aria-label="Liste des candidates">
-                    <!-- Les candidats seront chargés dynamiquement ici -->
-                    <div class="loading-candidates" id="loadingCandidates">
-                        <div class="loader"></div>
-                        <p>Chargement des candidates...</p>
-                    </div>
-                </div>
-                
-                <!-- Candidat sélectionné -->
-                <div class="selected-candidate" id="selectedCandidate" style="display: none;" role="region" aria-label="Candidat sélectionné">
-                    <h3>
-                        <i class="fas fa-check-circle" aria-hidden="true"></i>
-                        Votre sélection
-                    </h3>
-                    
-                    <div class="selected-info" id="selectedInfo" role="status" aria-live="polite">
-                        <!-- Informations de la candidate sélectionnée -->
-                    </div>
-                    
-                    <div class="action-buttons">
-                        <button type="button" onclick="showConfirmationModal()" id="voteBtn" class="vote-btn">
-                            <i class="fas fa-paper-plane" aria-hidden="true"></i>
-                            <span>Confirmer mon vote</span>
-                        </button>
-                        
-                        <button type="button" onclick="clearSelection()" class="secondary-btn">
-                            <i class="fas fa-times" aria-hidden="true"></i>
-                            <span>Changer de candidate</span>
-                        </button>
-                    </div>
-                    
-                    <p class="vote-note" role="note">
-                        <i class="fas fa-info-circle" aria-hidden="true"></i>
-                        <strong>Important :</strong> Après confirmation, votre vote sera enregistré de manière définitive et anonyme. Vous ne pourrez pas le modifier.
-                    </p>
-                </div>
-                
-                <!-- Navigation rapide -->
-                <nav class="section-nav" aria-label="Navigation dans la section">
-                    <button type="button" onclick="scrollToTop()" class="nav-btn">
-                        <i class="fas fa-arrow-up" aria-hidden="true"></i>
-                        Haut de page
-                    </button>
-                </nav>
-            </section>
-
-            <!-- Section déjà voté -->
-            <section class="already-voted" id="alreadyVotedSection" style="display: none;" aria-hidden="true" role="region" aria-label="Section déjà voté">
-                <div class="voted-message">
-                    <div class="success-icon" aria-hidden="true">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                    
-                    <h2>Merci pour votre participation !</h2>
-                    
-                    <div class="message-content">
-                        <p>Vous avez déjà voté pour cette élection.</p>
-                        <p>Les résultats seront communiqués par l'administration après la clôture du vote.</p>
-                        <p class="timestamp" id="voteTimestamp"></p>
-                    </div>
-                    
-                    <div class="action-buttons">
-                        <button type="button" onclick="logout()" class="logout-btn">
-                            <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
-                            <span>Terminer</span>
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Section confirmation de vote -->
-            <section class="confirmation-section" id="confirmationSection" style="display: none;" aria-hidden="true" role="region" aria-label="Confirmation de vote">
-                <div class="confirmation-message">
-                    <div class="success-icon" aria-hidden="true">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                    
-                    <h2>Vote enregistré avec succès !</h2>
-                    
-                    <div class="message-content">
-                        <p>Merci d'avoir participé à l'élection des délégués 2026.</p>
-                        <p>Votre vote a été enregistré de manière sécurisée et anonyme.</p>
-                        <p class="confirmation-id" id="confirmationId"></p>
-                    </div>
-                    
-                    <div class="action-buttons">
-                        <button type="button" onclick="logout()" class="logout-btn">
-                            <i class="fas fa-check" aria-hidden="true"></i>
-                            <span>Terminer</span>
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Section erreur -->
-            <section class="error-section" id="errorSection" style="display: none;" aria-hidden="true" role="alert">
-                <div class="error-message">
-                    <div class="error-icon" aria-hidden="true">
-                        <i class="fas fa-exclamation-triangle"></i>
-                    </div>
-                    
-                    <h2 id="errorTitle">Une erreur est survenue</h2>
-                    
-                    <div class="error-content">
-                        <p id="errorMessage"></p>
-                    </div>
-                    
-                    <div class="action-buttons">
-                        <button type="button" onclick="retryAction()" class="retry-btn">
-                            <i class="fas fa-redo" aria-hidden="true"></i>
-                            <span>Réessayer</span>
-                        </button>
-                        <button type="button" onclick="goToEmailSection()" class="secondary-btn">
-                            <i class="fas fa-envelope" aria-hidden="true"></i>
-                            <span>Retour à la vérification</span>
-                        </button>
-                    </div>
-                </div>
-            </section>
-        </main>
-
-        <!-- Pied de page -->
-        <footer class="footer" role="contentinfo">
-            <div class="footer-content">
-                <div class="footer-info">
-                    <p class="copyright">
-                        © 2026 - Cours privés "Source de la Fontaine" - Tous droits réservés
-                    </p>
-                    
-                    <p class="version">
-                        <i class="fas fa-code-branch" aria-hidden="true"></i>
-                        Version 2026.1.0
-                    </p>
-                </div>
-                
-                <nav class="footer-nav" aria-label="Navigation du pied de page">
-                    <ul class="footer-links">
-                        <li>
-                            <a href="#" onclick="refreshData(); return false;" aria-label="Actualiser la page">
-                                <i class="fas fa-sync" aria-hidden="true"></i>
-                                <span>Actualiser</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#" onclick="showSystemInfo(); return false;" aria-label="À propos du système">
-                                <i class="fas fa-info-circle" aria-hidden="true"></i>
-                                <span>À propos</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="/api/" target="_blank" rel="noopener noreferrer" aria-label="Documentation API (nouvelle fenêtre)">
-                                <i class="fas fa-code" aria-hidden="true"></i>
-                                <span>API Admin</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#" onclick="showAccessibilityInfo(); return false;" aria-label="Informations d'accessibilité">
-                                <i class="fas fa-universal-access" aria-hidden="true"></i>
-                                <span>Accessibilité</span>
-                            </a>
-                        </li>
-                    </ul>
-                </nav>
-                
-                <div class="tech-info">
-                    <p>
-                        <i class="fas fa-shield-alt" aria-hidden="true"></i>
-                        Système de vote sécurisé • SSL/TLS • Base de données chiffrée
-                    </p>
-                    <p class="server-info" id="serverInfo">
-                        <i class="fas fa-server" aria-hidden="true"></i>
-                        Serveur : vote-scolaire.onrender.com
-                    </p>
-                </div>
-            </div>
-        </footer>
-    </div>
-
-    <!-- Modals -->
-
-    <!-- Modal de confirmation de vote -->
-    <div class="modal" id="confirmationModal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="confirmationTitle" aria-describedby="confirmationDescription">
-        <div class="modal-overlay" onclick="hideModal()"></div>
-        <div class="modal-content" role="document">
-            <div class="modal-header">
-                <h3 id="confirmationTitle">
-                    <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
-                    Confirmer votre vote
-                </h3>
-                <button type="button" class="modal-close" onclick="hideModal()" aria-label="Fermer la fenêtre">
-                    <i class="fas fa-times" aria-hidden="true"></i>
-                </button>
-            </div>
-            
-            <div class="modal-body">
-                <p id="confirmationDescription">Vous êtes sur le point de voter pour :</p>
-                
-                <div class="candidate-confirm" id="confirmCandidate" role="status">
-                    <!-- Informations de confirmation -->
-                </div>
-                
-                <div class="warning-message" role="alert">
-                    <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
-                    <div>
-                        <p><strong>Cette action est irréversible</strong></p>
-                        <p>Une fois confirmé, vous ne pourrez pas modifier ou annuler votre vote.</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="modal-footer">
-                <button type="button" onclick="hideModal()" class="cancel-btn">
-                    <i class="fas fa-times" aria-hidden="true"></i>
-                    <span>Annuler</span>
-                </button>
-                <button type="button" onclick="submitVote()" class="confirm-btn" id="confirmVoteBtn">
-                    <i class="fas fa-check" aria-hidden="true"></i>
-                    <span>Confirmer définitivement</span>
-                </button>
-            </div>
+        
+        <div class="stats-grid" id="statsGrid">
+            <!-- Les statistiques seront chargées ici -->
+        </div>
+        
+        <h2><i class="fas fa-chart-bar"></i> Résultats détaillés</h2>
+        <div class="results-table-container">
+            <table class="results-table" id="resultsTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Candidate</th>
+                        <th>Classe</th>
+                        <th>Votes</th>
+                        <th>Pourcentage</th>
+                        <th>Statut</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody">
+                    <!-- Les résultats seront chargés ici -->
+                </tbody>
+            </table>
+        </div>
+        
+        <h2><i class="fas fa-users"></i> Liste des votants</h2>
+        <div class="results-table-container">
+            <table class="results-table" id="votersTable">
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Date du vote</th>
+                        <th>Candidate</th>
+                    </tr>
+                </thead>
+                <tbody id="votersBody">
+                    <!-- Les votants seront chargés ici -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="export-buttons">
+            <button class="export-btn" onclick="exportToExcel()">
+                <i class="fas fa-file-excel"></i> Exporter Excel
+            </button>
+            <button class="export-btn" onclick="exportToPDF()">
+                <i class="fas fa-file-pdf"></i> Exporter PDF
+            </button>
+            <button class="export-btn" onclick="printResults()">
+                <i class="fas fa-print"></i> Imprimer
+            </button>
+            <button class="export-btn" onclick="goBack()" style="background: #6c757d;">
+                <i class="fas fa-arrow-left"></i> Retour
+            </button>
         </div>
     </div>
 
-    <!-- Modal d'information système -->
-    <div class="modal" id="systemInfoModal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="systemInfoTitle">
-        <div class="modal-overlay" onclick="hideSystemInfoModal()"></div>
-        <div class="modal-content" role="document">
-            <div class="modal-header">
-                <h3 id="systemInfoTitle">
-                    <i class="fas fa-info-circle" aria-hidden="true"></i>
-                    À propos du système de vote
-                </h3>
-                <button type="button" class="modal-close" onclick="hideSystemInfoModal()" aria-label="Fermer la fenêtre">
-                    <i class="fas fa-times" aria-hidden="true"></i>
-                </button>
-            </div>
-            
-            <div class="modal-body">
-                <div class="system-details">
-                    <div class="detail-item">
-                        <span class="detail-label">Système :</span>
-                        <span class="detail-value">Vote Scolaire 2026</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Établissement :</span>
-                        <span class="detail-value">Cours privés Source de la Fontaine</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Élection :</span>
-                        <span class="detail-value">Délégués élèves 2026</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Période :</span>
-                        <span class="detail-value">9-13 février 2026</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Participants :</span>
-                        <span class="detail-value">Corps professoral uniquement</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Règles :</span>
-                        <span class="detail-value">Un vote par professeur, anonymat garanti</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Sécurité :</span>
-                        <span class="detail-value">Base de données sécurisée SSL/TLS</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Développeur :</span>
-                        <span class="detail-value">Service informatique</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="modal-footer">
-                <button type="button" onclick="hideSystemInfoModal()" class="ok-btn">
-                    <i class="fas fa-thumbs-up" aria-hidden="true"></i>
-                    <span>Compris</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal d'accessibilité -->
-    <div class="modal" id="accessibilityModal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="accessibilityTitle">
-        <div class="modal-overlay" onclick="hideAccessibilityModal()"></div>
-        <div class="modal-content" role="document">
-            <div class="modal-header">
-                <h3 id="accessibilityTitle">
-                    <i class="fas fa-universal-access" aria-hidden="true"></i>
-                    Accessibilité
-                </h3>
-                <button type="button" class="modal-close" onclick="hideAccessibilityModal()" aria-label="Fermer la fenêtre">
-                    <i class="fas fa-times" aria-hidden="true"></i>
-                </button>
-            </div>
-            
-            <div class="modal-body">
-                <div class="accessibility-info">
-                    <p>Ce site a été conçu pour être accessible à tous les utilisateurs :</p>
-                    
-                    <ul class="accessibility-features">
-                        <li><i class="fas fa-check" aria-hidden="true"></i> Navigation au clavier supportée</li>
-                        <li><i class="fas fa-check" aria-hidden="true"></i> Contraste des couleurs optimisé</li>
-                        <li><i class="fas fa-check" aria-hidden="true"></i> Texte redimensionnable sans perte de fonctionnalité</li>
-                        <li><i class="fas fa-check" aria-hidden="true"></i> Alternatives textuelles pour les images</li>
-                        <li><i class="fas fa-check" aria-hidden="true"></i> Structure HTML sémantique</li>
-                        <li><i class="fas fa-check" aria-hidden="true"></i> Support des lecteurs d'écran</li>
-                    </ul>
-                    
-                    <div class="accessibility-shortcuts">
-                        <h4>Raccourcis clavier :</h4>
-                        <ul>
-                            <li><kbd>Tab</kbd> : Navigation entre les éléments</li>
-                            <li><kbd>Entrée</kbd> : Activer un élément</li>
-                            <li><kbd>Échap</kbd> : Fermer les modales</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="modal-footer">
-                <button type="button" onclick="hideAccessibilityModal()" class="ok-btn">
-                    <i class="fas fa-thumbs-up" aria-hidden="true"></i>
-                    <span>Compris</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Loader global -->
-    <div class="global-loader" id="globalLoader" style="display: none;" role="status" aria-label="Chargement en cours">
-        <div class="loader-content">
-            <div class="loader" aria-hidden="true"></div>
-            <p id="loaderMessage">Chargement en cours...</p>
-        </div>
-    </div>
-
-    <!-- Service Worker pour PWA (optionnel) -->
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js').catch(function(error) {
-                    console.log('Service Worker registration failed:', error);
-                });
+        const ADMIN_SECRET = 'admin_vote_2026_source_fontaine';
+        const API_BASE = window.location.origin;
+        
+        async function loadAdminData() {
+            try {
+                // Charger les résultats
+                const resultsResponse = await fetch(`${API_BASE}/api/results?admin_secret=${ADMIN_SECRET}`);
+                const resultsData = await resultsResponse.json();
+                
+                // Charger les statistiques
+                const statsResponse = await fetch(`${API_BASE}/api/stats?admin_secret=${ADMIN_SECRET}`);
+                const statsData = await statsResponse.json();
+                
+                // Afficher les données
+                displayStats(statsData);
+                displayResults(resultsData);
+                displayVoters(statsData);
+                
+            } catch (error) {
+                console.error('Erreur chargement admin:', error);
+                alert('Accès refusé ou erreur de connexion');
+                window.location.href = '/';
+            }
+        }
+        
+        function displayStats(data) {
+            const statsGrid = document.getElementById('statsGrid');
+            if (!statsGrid) return;
+            
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <h3 id="totalVotes">${data.total_votes || 0}</h3>
+                    <p>Votes totaux</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="totalCandidates">${data.total_candidates || 0}</h3>
+                    <p>Candidates</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="participationRate">${data.participation_rate || 0}%</h3>
+                    <p>Taux de participation</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="votes24h">${data.votes_last_24h || 0}</h3>
+                    <p>Votes (24h)</p>
+                </div>
+            `;
+        }
+        
+        function displayResults(data) {
+            const resultsBody = document.getElementById('resultsBody');
+            if (!resultsBody || !data.results) return;
+            
+            resultsBody.innerHTML = '';
+            
+            data.results.forEach((result, index) => {
+                const row = document.createElement('tr');
+                const isWinner = index === 0;
+                
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td><strong>${result.candidate.nom_complet}</strong></td>
+                    <td>${result.candidate.classe}</td>
+                    <td><strong>${result.votes}</strong></td>
+                    <td>${result.percentage.toFixed(1)}%</td>
+                    <td>${isWinner ? '<span class="winner-badge">Gagnante</span>' : ''}</td>
+                `;
+                
+                resultsBody.appendChild(row);
             });
         }
-    </script>
-
-    <!-- Script principal -->
-    <script src="script.js" defer></script>
-    
-    <!-- Scripts d'analytics (optionnel) -->
-    <script>
-        // Analytics simple
-        window.addEventListener('load', function() {
-            const visitTime = new Date().toISOString();
-            localStorage.setItem('lastVisit', visitTime);
-        });
+        
+        function displayVoters(data) {
+            const votersBody = document.getElementById('votersBody');
+            if (!votersBody || !data.votants) return;
+            
+            votersBody.innerHTML = '';
+            
+            data.votants.forEach(voter => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${voter.email}</td>
+                    <td>${new Date(voter.date_vote).toLocaleString('fr-FR')}</td>
+                    <td>${voter.candidate_id ? 'Candidate #' + voter.candidate_id : 'N/A'}</td>
+                `;
+                
+                votersBody.appendChild(row);
+            });
+        }
+        
+        function exportToExcel() {
+            alert('Export Excel - Fonctionnalité à implémenter');
+        }
+        
+        function exportToPDF() {
+            window.print();
+        }
+        
+        function printResults() {
+            window.print();
+        }
+        
+        function goBack() {
+            window.location.href = '/';
+        }
+        
+        // Charger les données au démarrage
+        document.addEventListener('DOMContentLoaded', loadAdminData);
     </script>
 </body>
 </html>
