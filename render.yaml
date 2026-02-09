@@ -1,40 +1,17 @@
 services:
-  # Base de données PostgreSQL
-  - type: postgres
-    name: vote-postgres
-    databaseName: vote
-    user: vote_user
-    
-  # Backend API
   - type: web
-    name: vote-backend
+    name: vote-scolaire
+    env: python
+    region: frankfurt  # Ou la région la plus proche
+    plan: free
     runtime: python
-    rootDir: backend
-    buildCommand: |
-      pip install -r requirements.txt
-    startCommand: gunicorn wsgi:app
+    pythonVersion: 3.11.9  # FORCER Python 3.11
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: gunicorn backend.app:app
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: vote-postgres
-          property: connectionString
+        value: postgresql://vote_user:sVZxXHKa3RfuRfS2SkcSJUuIJ8C0KMpF@dpg-d64t7q24d50c73eo9nn0-a:5432/vote_vq45
       - key: SECRET_KEY
-        generateValue: true
-      - key: FLASK_ENV
-        value: production
+        value: votre_secret_key_secure_2026
     healthCheckPath: /api/status
-    
-  # Frontend - POINTANT VERS "front/" au lieu de "frontend/"
-  - type: web
-    name: vote-frontend
-    runtime: node
-    rootDir: front      ← CHANGÉ ICI
-    buildCommand: |
-      npm install
-    startCommand: npm start
-    envVars:
-      - key: API_URL
-        fromService:
-          name: vote-backend
-          type: web
-          property: host
+    autoDeploy: true
