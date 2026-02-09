@@ -3,143 +3,519 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Système de vote électronique pour l'élection des délégués élèves 2026">
+    <meta name="keywords" content="vote, élection, délégués, scolaire, 2026, professeurs">
+    <meta name="author" content="Cours privés Source de la Fontaine">
     <title>Vote Scolaire 2026 - Élection des Délégués</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="https://ui-avatars.com/api/?name=CSF&background=4361ee&color=fff">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=CSF&background=4361ee&color=fff&size=180">
+    
+    <!-- Stylesheets -->
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#4361ee">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://vote-scolaire.onrender.com/">
+    <meta property="og:title" content="Vote Scolaire 2026 - Cours privés Source de la Fontaine">
+    <meta property="og:description" content="Système de vote électronique pour l'élection des délégués élèves">
+    <meta property="og:image" content="https://ui-avatars.com/api/?name=Vote+2026&background=4361ee&color=fff&size=1200">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://vote-scolaire.onrender.com/">
+    <meta property="twitter:title" content="Vote Scolaire 2026 - Cours privés Source de la Fontaine">
+    <meta property="twitter:description" content="Système de vote électronique pour l'élection des délégués élèves">
+    <meta property="twitter:image" content="https://ui-avatars.com/api/?name=Vote+2026&background=4361ee&color=fff&size=1200">
+    
+    <!-- Preload Resources -->
+    <link rel="preload" href="style.css" as="style">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 </head>
 <body>
     <div class="container">
+        <!-- Skip to main content for accessibility -->
+        <a href="#main-content" class="skip-link">Aller au contenu principal</a>
+        
         <!-- En-tête -->
-        <header class="header">
+        <header class="header" role="banner">
             <div class="logo">
-                <i class="fas fa-vote-yea"></i>
-                <h1>Vote Scolaire 2026</h1>
+                <i class="fas fa-vote-yea" aria-hidden="true"></i>
+                <div>
+                    <h1>Vote Scolaire 2026</h1>
+                    <p class="school-name">Cours privés Source de la Fontaine</p>
+                </div>
             </div>
-            <div class="election-info" id="electionInfo">
-                <p><i class="fas fa-clock"></i> <span id="timeRemaining">Chargement...</span></p>
-                <p><i class="fas fa-users"></i> <span id="votesCount">0</span> votes</p>
+            
+            <div class="election-info" id="electionInfo" aria-live="polite">
+                <p>
+                    <i class="fas fa-clock" aria-hidden="true"></i>
+                    <span id="timeRemaining">Chargement...</span>
+                    <span class="sr-only">Temps restant avant la fin du vote</span>
+                </p>
+                <p>
+                    <i class="fas fa-users" aria-hidden="true"></i>
+                    <span id="votesCount">0</span> votes
+                    <span class="sr-only">Nombre total de votes</span>
+                </p>
             </div>
         </header>
 
         <!-- Bannière de statut -->
-        <div class="status-banner" id="statusBanner">
-            <i class="fas fa-info-circle"></i>
+        <div class="status-banner" id="statusBanner" role="status" aria-live="polite">
+            <i class="fas fa-info-circle" aria-hidden="true"></i>
             <span id="statusMessage">Chargement de l'élection...</span>
         </div>
 
-        <!-- Section principale -->
-        <main>
+        <!-- Contenu principal -->
+        <main id="main-content" role="main">
             <!-- Section de vérification email -->
             <section class="email-section" id="emailSection">
-                <h2><i class="fas fa-envelope"></i> Vérification du vote</h2>
-                <p>Veuillez entrer votre email professionnel pour vérifier votre éligibilité au vote :</p>
-                <div class="email-form">
-                    <input type="email" id="emailInput" placeholder="votre.email@ecole.fr">
-                    <button onclick="verifyEmail()" id="verifyBtn">
-                        <i class="fas fa-check"></i> Vérifier
-                    </button>
-                </div>
-                <p class="note"><i class="fas fa-exclamation-circle"></i> Un seul vote par professeur est autorisé.</p>
-            </section>
-
-            <!-- Section des candidats (cachée par défaut) -->
-            <section class="candidates-section" id="candidatesSection" style="display: none;">
-                <h2><i class="fas fa-user-graduate"></i> Candidates 2026</h2>
-                <p>Sélectionnez la candidate que vous souhaitez élire :</p>
-                <div class="candidates-grid" id="candidatesGrid">
-                    <!-- Les candidats seront chargés ici -->
-                </div>
-                <div class="selected-candidate" id="selectedCandidate" style="display: none;">
-                    <h3><i class="fas fa-check-circle"></i> Votre sélection :</h3>
-                    <div id="selectedInfo"></div>
-                    <button onclick="submitVote()" class="vote-btn" id="voteBtn">
-                        <i class="fas fa-paper-plane"></i> Confirmer mon vote
-                    </button>
-                </div>
-            </section>
-
-            <!-- Section des résultats (cachée par défaut) -->
-            <section class="results-section" id="resultsSection" style="display: none;">
-                <h2><i class="fas fa-chart-bar"></i> Résultats en direct</h2>
-                <div class="results-container">
-                    <div class="results-stats">
-                        <div class="stat">
-                            <h3 id="totalVotes">0</h3>
-                            <p>Votes totaux</p>
-                        </div>
-                        <div class="stat">
-                            <h3 id="participationRate">0%</h3>
-                            <p>Taux de participation</p>
-                        </div>
-                        <div class="stat">
-                            <h3 id="timeLeft">--</h3>
-                            <p>Temps restant</p>
-                        </div>
+                <h2>
+                    <i class="fas fa-envelope" aria-hidden="true"></i>
+                    Vérification du vote
+                </h2>
+                
+                <p class="section-description">
+                    Veuillez entrer votre email professionnel pour vérifier votre éligibilité au vote :
+                </p>
+                
+                <form class="email-form" id="emailForm" novalidate>
+                    <div class="input-group">
+                        <label for="emailInput" class="sr-only">Email professionnel</label>
+                        <input 
+                            type="email" 
+                            id="emailInput" 
+                            name="email"
+                            placeholder="votre.email@ecole.fr"
+                            required
+                            autocomplete="email"
+                            aria-describedby="emailHelp"
+                            spellcheck="false"
+                        >
+                        <div class="input-error" id="emailError" role="alert" aria-live="assertive"></div>
                     </div>
-                    <div class="results-list" id="resultsList">
-                        <!-- Les résultats seront chargés ici -->
-                    </div>
+                    
+                    <button type="button" onclick="verifyEmail()" id="verifyBtn" class="primary-btn">
+                        <i class="fas fa-check" aria-hidden="true"></i>
+                        <span>Vérifier</span>
+                    </button>
+                </form>
+                
+                <p class="note" role="note">
+                    <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+                    Un seul vote par professeur est autorisé. Votre vote est anonyme et sécurisé.
+                </p>
+                
+                <div class="period-info" role="contentinfo">
+                    <i class="fas fa-calendar-alt" aria-hidden="true"></i>
+                    <span>Période de vote : Lundi 9 février au vendredi 13 février 2026</span>
                 </div>
             </section>
 
-            <!-- Section déjà voté (cachée par défaut) -->
-            <section class="already-voted" id="alreadyVotedSection" style="display: none;">
+            <!-- Section des candidats -->
+            <section class="candidates-section" id="candidatesSection" style="display: none;" aria-hidden="true">
+                <h2>
+                    <i class="fas fa-user-graduate" aria-hidden="true"></i>
+                    Candidates 2026
+                </h2>
+                
+                <p class="section-description">
+                    Sélectionnez la candidate que vous souhaitez élire. Cliquez sur une candidate pour voir plus de détails.
+                </p>
+                
+                <!-- Filtres par classe (optionnel) -->
+                <div class="filter-controls" role="group" aria-label="Filtrer par classe">
+                    <p class="filter-label">Filtrer par classe :</p>
+                    <div class="filter-buttons">
+                        <button type="button" class="filter-btn active" onclick="filterCandidates('all')" aria-pressed="true">
+                            Toutes
+                        </button>
+                        <button type="button" class="filter-btn" onclick="filterCandidates('6ème')" aria-pressed="false">
+                            6ème
+                        </button>
+                        <button type="button" class="filter-btn" onclick="filterCandidates('5ème')" aria-pressed="false">
+                            5ème
+                        </button>
+                        <button type="button" class="filter-btn" onclick="filterCandidates('4ème')" aria-pressed="false">
+                            4ème
+                        </button>
+                        <button type="button" class="filter-btn" onclick="filterCandidates('3ème')" aria-pressed="false">
+                            3ème
+                        </button>
+                        <button type="button" class="filter-btn" onclick="filterCandidates('2nde')" aria-pressed="false">
+                            2nde
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Grille des candidats -->
+                <div class="candidates-grid" id="candidatesGrid" role="list" aria-label="Liste des candidates">
+                    <!-- Les candidats seront chargés dynamiquement ici -->
+                    <div class="loading-candidates" id="loadingCandidates">
+                        <div class="loader"></div>
+                        <p>Chargement des candidates...</p>
+                    </div>
+                </div>
+                
+                <!-- Candidat sélectionné -->
+                <div class="selected-candidate" id="selectedCandidate" style="display: none;" role="region" aria-label="Candidat sélectionné">
+                    <h3>
+                        <i class="fas fa-check-circle" aria-hidden="true"></i>
+                        Votre sélection
+                    </h3>
+                    
+                    <div class="selected-info" id="selectedInfo" role="status" aria-live="polite">
+                        <!-- Informations de la candidate sélectionnée -->
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button type="button" onclick="showConfirmationModal()" id="voteBtn" class="vote-btn">
+                            <i class="fas fa-paper-plane" aria-hidden="true"></i>
+                            <span>Confirmer mon vote</span>
+                        </button>
+                        
+                        <button type="button" onclick="clearSelection()" class="secondary-btn">
+                            <i class="fas fa-times" aria-hidden="true"></i>
+                            <span>Changer de candidate</span>
+                        </button>
+                    </div>
+                    
+                    <p class="vote-note" role="note">
+                        <i class="fas fa-info-circle" aria-hidden="true"></i>
+                        <strong>Important :</strong> Après confirmation, votre vote sera enregistré de manière définitive et anonyme. Vous ne pourrez pas le modifier.
+                    </p>
+                </div>
+                
+                <!-- Navigation rapide -->
+                <nav class="section-nav" aria-label="Navigation dans la section">
+                    <button type="button" onclick="scrollToTop()" class="nav-btn">
+                        <i class="fas fa-arrow-up" aria-hidden="true"></i>
+                        Haut de page
+                    </button>
+                </nav>
+            </section>
+
+            <!-- Section déjà voté -->
+            <section class="already-voted" id="alreadyVotedSection" style="display: none;" aria-hidden="true" role="region" aria-label="Section déjà voté">
                 <div class="voted-message">
-                    <i class="fas fa-check-circle success"></i>
+                    <div class="success-icon" aria-hidden="true">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    
                     <h2>Merci pour votre participation !</h2>
-                    <p>Vous avez déjà voté pour cette élection.</p>
-                    <p>Les résultats seront disponibles après la clôture du vote.</p>
-                    <button onclick="showResults()" class="results-btn">
-                        <i class="fas fa-chart-bar"></i> Voir les résultats
-                    </button>
+                    
+                    <div class="message-content">
+                        <p>Vous avez déjà voté pour cette élection.</p>
+                        <p>Les résultats seront communiqués par l'administration après la clôture du vote.</p>
+                        <p class="timestamp" id="voteTimestamp"></p>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button type="button" onclick="logout()" class="logout-btn">
+                            <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
+                            <span>Terminer</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section confirmation de vote -->
+            <section class="confirmation-section" id="confirmationSection" style="display: none;" aria-hidden="true" role="region" aria-label="Confirmation de vote">
+                <div class="confirmation-message">
+                    <div class="success-icon" aria-hidden="true">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    
+                    <h2>Vote enregistré avec succès !</h2>
+                    
+                    <div class="message-content">
+                        <p>Merci d'avoir participé à l'élection des délégués 2026.</p>
+                        <p>Votre vote a été enregistré de manière sécurisée et anonyme.</p>
+                        <p class="confirmation-id" id="confirmationId"></p>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button type="button" onclick="logout()" class="logout-btn">
+                            <i class="fas fa-check" aria-hidden="true"></i>
+                            <span>Terminer</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section erreur -->
+            <section class="error-section" id="errorSection" style="display: none;" aria-hidden="true" role="alert">
+                <div class="error-message">
+                    <div class="error-icon" aria-hidden="true">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    
+                    <h2 id="errorTitle">Une erreur est survenue</h2>
+                    
+                    <div class="error-content">
+                        <p id="errorMessage"></p>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button type="button" onclick="retryAction()" class="retry-btn">
+                            <i class="fas fa-redo" aria-hidden="true"></i>
+                            <span>Réessayer</span>
+                        </button>
+                        <button type="button" onclick="goToEmailSection()" class="secondary-btn">
+                            <i class="fas fa-envelope" aria-hidden="true"></i>
+                            <span>Retour à la vérification</span>
+                        </button>
+                    </div>
                 </div>
             </section>
         </main>
 
         <!-- Pied de page -->
-        <footer class="footer">
-            <p>© 2026 - Élection des Délégués Élèves • École Secondaire</p>
-            <p class="footer-links">
-                <a href="#" onclick="showResults()"><i class="fas fa-chart-bar"></i> Résultats</a>
-                <a href="/api/" target="_blank"><i class="fas fa-code"></i> API</a>
-                <a href="#" onclick="refreshData()"><i class="fas fa-sync"></i> Actualiser</a>
-            </p>
-            <p class="period-info">
-                <i class="fas fa-calendar-alt"></i> Période de vote : 8 au 10 février 2026
-            </p>
+        <footer class="footer" role="contentinfo">
+            <div class="footer-content">
+                <div class="footer-info">
+                    <p class="copyright">
+                        © 2026 - Cours privés "Source de la Fontaine" - Tous droits réservés
+                    </p>
+                    
+                    <p class="version">
+                        <i class="fas fa-code-branch" aria-hidden="true"></i>
+                        Version 2026.1.0
+                    </p>
+                </div>
+                
+                <nav class="footer-nav" aria-label="Navigation du pied de page">
+                    <ul class="footer-links">
+                        <li>
+                            <a href="#" onclick="refreshData(); return false;" aria-label="Actualiser la page">
+                                <i class="fas fa-sync" aria-hidden="true"></i>
+                                <span>Actualiser</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" onclick="showSystemInfo(); return false;" aria-label="À propos du système">
+                                <i class="fas fa-info-circle" aria-hidden="true"></i>
+                                <span>À propos</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/api/" target="_blank" rel="noopener noreferrer" aria-label="Documentation API (nouvelle fenêtre)">
+                                <i class="fas fa-code" aria-hidden="true"></i>
+                                <span>API Admin</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" onclick="showAccessibilityInfo(); return false;" aria-label="Informations d'accessibilité">
+                                <i class="fas fa-universal-access" aria-hidden="true"></i>
+                                <span>Accessibilité</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                
+                <div class="tech-info">
+                    <p>
+                        <i class="fas fa-shield-alt" aria-hidden="true"></i>
+                        Système de vote sécurisé • SSL/TLS • Base de données chiffrée
+                    </p>
+                    <p class="server-info" id="serverInfo">
+                        <i class="fas fa-server" aria-hidden="true"></i>
+                        Serveur : vote-scolaire.onrender.com
+                    </p>
+                </div>
+            </div>
         </footer>
     </div>
 
-    <!-- Modal de confirmation -->
-    <div class="modal" id="confirmationModal" style="display: none;">
-        <div class="modal-content">
-            <h3><i class="fas fa-exclamation-triangle"></i> Confirmation de vote</h3>
-            <p>Vous êtes sur le point de voter pour :</p>
-            <div class="candidate-confirm" id="confirmCandidate"></div>
-            <p><strong>Attention :</strong> Cette action est irréversible. Vous ne pourrez pas changer votre vote.</p>
-            <div class="modal-buttons">
-                <button onclick="hideModal()" class="cancel-btn">
-                    <i class="fas fa-times"></i> Annuler
+    <!-- Modals -->
+
+    <!-- Modal de confirmation de vote -->
+    <div class="modal" id="confirmationModal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="confirmationTitle" aria-describedby="confirmationDescription">
+        <div class="modal-overlay" onclick="hideModal()"></div>
+        <div class="modal-content" role="document">
+            <div class="modal-header">
+                <h3 id="confirmationTitle">
+                    <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                    Confirmer votre vote
+                </h3>
+                <button type="button" class="modal-close" onclick="hideModal()" aria-label="Fermer la fenêtre">
+                    <i class="fas fa-times" aria-hidden="true"></i>
                 </button>
-                <button onclick="confirmVote()" class="confirm-btn">
-                    <i class="fas fa-check"></i> Confirmer le vote
+            </div>
+            
+            <div class="modal-body">
+                <p id="confirmationDescription">Vous êtes sur le point de voter pour :</p>
+                
+                <div class="candidate-confirm" id="confirmCandidate" role="status">
+                    <!-- Informations de confirmation -->
+                </div>
+                
+                <div class="warning-message" role="alert">
+                    <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+                    <div>
+                        <p><strong>Cette action est irréversible</strong></p>
+                        <p>Une fois confirmé, vous ne pourrez pas modifier ou annuler votre vote.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" onclick="hideModal()" class="cancel-btn">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                    <span>Annuler</span>
+                </button>
+                <button type="button" onclick="submitVote()" class="confirm-btn" id="confirmVoteBtn">
+                    <i class="fas fa-check" aria-hidden="true"></i>
+                    <span>Confirmer définitivement</span>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Modal de succès -->
-    <div class="modal" id="successModal" style="display: none;">
-        <div class="modal-content success">
-            <h3><i class="fas fa-check-circle"></i> Vote enregistré !</h3>
-            <p>Votre vote a été enregistré avec succès.</p>
-            <p>Merci pour votre participation à l'élection 2026.</p>
-            <button onclick="hideSuccessModal()" class="ok-btn">
-                <i class="fas fa-thumbs-up"></i> Parfait !
-            </button>
+    <!-- Modal d'information système -->
+    <div class="modal" id="systemInfoModal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="systemInfoTitle">
+        <div class="modal-overlay" onclick="hideSystemInfoModal()"></div>
+        <div class="modal-content" role="document">
+            <div class="modal-header">
+                <h3 id="systemInfoTitle">
+                    <i class="fas fa-info-circle" aria-hidden="true"></i>
+                    À propos du système de vote
+                </h3>
+                <button type="button" class="modal-close" onclick="hideSystemInfoModal()" aria-label="Fermer la fenêtre">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="system-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Système :</span>
+                        <span class="detail-value">Vote Scolaire 2026</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Établissement :</span>
+                        <span class="detail-value">Cours privés Source de la Fontaine</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Élection :</span>
+                        <span class="detail-value">Délégués élèves 2026</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Période :</span>
+                        <span class="detail-value">9-13 février 2026</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Participants :</span>
+                        <span class="detail-value">Corps professoral uniquement</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Règles :</span>
+                        <span class="detail-value">Un vote par professeur, anonymat garanti</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Sécurité :</span>
+                        <span class="detail-value">Base de données sécurisée SSL/TLS</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Développeur :</span>
+                        <span class="detail-value">Service informatique</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" onclick="hideSystemInfoModal()" class="ok-btn">
+                    <i class="fas fa-thumbs-up" aria-hidden="true"></i>
+                    <span>Compris</span>
+                </button>
+            </div>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <!-- Modal d'accessibilité -->
+    <div class="modal" id="accessibilityModal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="accessibilityTitle">
+        <div class="modal-overlay" onclick="hideAccessibilityModal()"></div>
+        <div class="modal-content" role="document">
+            <div class="modal-header">
+                <h3 id="accessibilityTitle">
+                    <i class="fas fa-universal-access" aria-hidden="true"></i>
+                    Accessibilité
+                </h3>
+                <button type="button" class="modal-close" onclick="hideAccessibilityModal()" aria-label="Fermer la fenêtre">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="accessibility-info">
+                    <p>Ce site a été conçu pour être accessible à tous les utilisateurs :</p>
+                    
+                    <ul class="accessibility-features">
+                        <li><i class="fas fa-check" aria-hidden="true"></i> Navigation au clavier supportée</li>
+                        <li><i class="fas fa-check" aria-hidden="true"></i> Contraste des couleurs optimisé</li>
+                        <li><i class="fas fa-check" aria-hidden="true"></i> Texte redimensionnable sans perte de fonctionnalité</li>
+                        <li><i class="fas fa-check" aria-hidden="true"></i> Alternatives textuelles pour les images</li>
+                        <li><i class="fas fa-check" aria-hidden="true"></i> Structure HTML sémantique</li>
+                        <li><i class="fas fa-check" aria-hidden="true"></i> Support des lecteurs d'écran</li>
+                    </ul>
+                    
+                    <div class="accessibility-shortcuts">
+                        <h4>Raccourcis clavier :</h4>
+                        <ul>
+                            <li><kbd>Tab</kbd> : Navigation entre les éléments</li>
+                            <li><kbd>Entrée</kbd> : Activer un élément</li>
+                            <li><kbd>Échap</kbd> : Fermer les modales</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" onclick="hideAccessibilityModal()" class="ok-btn">
+                    <i class="fas fa-thumbs-up" aria-hidden="true"></i>
+                    <span>Compris</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loader global -->
+    <div class="global-loader" id="globalLoader" style="display: none;" role="status" aria-label="Chargement en cours">
+        <div class="loader-content">
+            <div class="loader" aria-hidden="true"></div>
+            <p id="loaderMessage">Chargement en cours...</p>
+        </div>
+    </div>
+
+    <!-- Service Worker pour PWA (optionnel) -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js').catch(function(error) {
+                    console.log('Service Worker registration failed:', error);
+                });
+            });
+        }
+    </script>
+
+    <!-- Script principal -->
+    <script src="script.js" defer></script>
+    
+    <!-- Scripts d'analytics (optionnel) -->
+    <script>
+        // Analytics simple
+        window.addEventListener('load', function() {
+            const visitTime = new Date().toISOString();
+            localStorage.setItem('lastVisit', visitTime);
+        });
+    </script>
 </body>
 </html>
