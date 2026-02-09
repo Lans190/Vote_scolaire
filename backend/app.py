@@ -142,6 +142,26 @@ class Vote(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 
+# ==================== FONCTIONS ADMIN SIMPLIFIÉES ====================
+
+def check_admin_access():
+    """Vérifie si la requête provient de l'admin - VERSION SIMPLIFIÉE"""
+    admin_secret = request.args.get('admin_secret')
+    
+    # Secret par défaut pour test
+    expected_secret = 'admin2026'
+    
+    print(f"🔍 Vérification admin:")
+    print(f"   Secret reçu: {admin_secret}")
+    print(f"   Secret attendu: {expected_secret}")
+    
+    if admin_secret == expected_secret:
+        print("✅ Accès admin accordé")
+        return True
+    
+    print("❌ Accès admin refusé")
+    return False
+
 # ==================== ROUTES POUR LE FRONTEND ====================
 
 @app.route('/')
@@ -176,6 +196,7 @@ def index():
                 <h3>📡 API Disponible</h3>
                 <p><a href="/api/status">/api/status</a> - Statut du système</p>
                 <p><a href="/api/election">/api/election</a> - Élection active</p>
+                <p><a href="/api/results?admin_secret=admin2026">/api/results</a> - Résultats (Admin)</p>
             </div>
             <p>© 2026 - Cours privés Source de la Fontaine - Tous droits réservés</p>
         </body>
@@ -192,7 +213,7 @@ def serve_frontend(path):
 
 @app.route('/api/')
 def api_docs():
-    """Documentation de l'API (version admin)"""
+    """Documentation de l'API"""
     return '''
     <!DOCTYPE html>
     <html>
@@ -222,15 +243,13 @@ def api_docs():
         </div>
         
         <div class="endpoint admin">
-            <h3>GET <code>/api/results</code></h3>
+            <h3>GET <code>/api/results?admin_secret=admin2026</code></h3>
             <p><strong>ADMIN ONLY</strong> - Résultats complets du vote</p>
-            <p><em>Requiert le paramètre admin_secret</em></p>
         </div>
         
         <div class="endpoint admin">
-            <h3>GET <code>/api/stats</code></h3>
+            <h3>GET <code>/api/stats?admin_secret=admin2026</code></h3>
             <p><strong>ADMIN ONLY</strong> - Statistiques détaillées</p>
-            <p><em>Requiert le paramètre admin_secret</em></p>
         </div>
         
         <div class="endpoint">
@@ -292,14 +311,6 @@ def init_database():
                 db.session.commit()
                 print("✅ NOUVELLE ÉLECTION 2026 créée")
                 print(f"📅 Nouvelle période de vote : {date_debut.strftime('%d/%m/%Y')} au {date_fin.strftime('%d/%m/%Y')}")
-            
-            # Si élection existe, mettre à jour les dates si nécessaire
-            elif election.date_debut.year != 2026 or election.date_debut.month != 2 or election.date_debut.day != 9:
-                print("⚠️  Mise à jour des dates de l'élection...")
-                election.date_debut = datetime(2026, 2, 9, 0, 0, 0, tzinfo=timezone.utc)
-                election.date_fin = datetime(2026, 2, 13, 23, 59, 59, tzinfo=timezone.utc)
-                db.session.commit()
-                print("✅ Dates mises à jour pour 2026")
             
             candidates_count = Candidate.query.filter_by(election_id=election.id).count()
             
@@ -368,13 +379,6 @@ def get_system_status():
                     status = "pending"
                 else:
                     status = "finished"
-        
-        # Tester la connexion à la base de données
-        db_status = "connected"
-        try:
-            db.session.execute(text("SELECT 1"))
-        except Exception as e:
-            db_status = f"error: {str(e)[:50]}..."
         
         return jsonify({
             'system': {
@@ -534,22 +538,14 @@ def submit_vote():
         traceback.print_exc()
         return jsonify({'error': f'Erreur serveur: {str(e)}'}), 500
 
-def check_admin_access():
-    """Vérifie si la requête provient de l'admin"""
-    admin_secret = request.args.get('admin_secret')
-    expected_secret = os.getenv('ADMIN_SECRET', 'admin_vote_2026_source_fontaine')
-    
-    if admin_secret == expected_secret:
-        return True
-    return False
-
 @app.route('/api/results', methods=['GET'])
 def get_results():
     """Récupère les résultats du vote - ADMIN SEULEMENT"""
     if not check_admin_access():
         return jsonify({
             'error': 'Accès refusé',
-            'message': 'Cette fonctionnalité est réservée à l\'administration'
+            'message': 'Cette fonctionnalité est réservée à l\'administration',
+            'hint': 'Utilisez ?admin_secret=admin2026'
         }), 403
     
     try:
@@ -593,7 +589,8 @@ def get_statistics():
     if not check_admin_access():
         return jsonify({
             'error': 'Accès refusé',
-            'message': 'Cette fonctionnalité est réservée à l\'administration'
+            'message': 'Cette fonctionnalité est réservée à l\'administration',
+            'hint': 'Utilisez ?admin_secret=admin2026'
         }), 403
     
     try:
@@ -767,8 +764,8 @@ if __name__ == '__main__':
     
     print(f"🌐 Port d'écoute: {port}")
     print(f"📋 API Élection (professeurs)  : http://localhost:{port}/api/election")
-    print(f"🔐 API Résultats (admin)       : http://localhost:{port}/api/results?admin_secret=admin_vote_2026_source_fontaine")
-    print(f"📊 API Statistiques (admin)    : http://localhost:{port}/api/stats?admin_secret=admin_vote_2026_source_fontaine")
+    print(f"🔐 API Résultats (admin)       : http://localhost:{port}/api/results?admin_secret=admin2026")
+    print(f"📊 API Statistiques (admin)    : http://localhost:{port}/api/stats?admin_secret=admin2026")
     print(f"⚙️  API Status                  : http://localhost:{port}/api/status")
     print("=" * 80)
     print("⏰ PÉRIODE DE VOTE 2026 :")
