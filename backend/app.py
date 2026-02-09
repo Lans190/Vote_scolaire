@@ -1,19 +1,25 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta, timezone
 import os
 from dotenv import load_dotenv
+import psycopg2
+import sys
 
 
 # Charger les variables d'environnement
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='../front')
 CORS(app)
 
 # Configuration PostgreSQL - Base : vote
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/vote')
+database_url = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/vote')
+if database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev_secret_key_2024')
 
@@ -127,6 +133,72 @@ class Vote(db.Model):
             'date_vote': self.date_vote.isoformat() if self.date_vote else None,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
+
+# ==================== ROUTES POUR LE FRONTEND ====================
+
+@app.route('/')
+def index():
+    """Page d'accueil - Redirige vers le frontend"""
+    return send_from_directory('../front', 'index.html')
+
+@app.route('/<path:path>')
+def serve_frontend(path):
+    """Sert les fichiers statiques du frontend"""
+    return send_from_directory('../front', path)
+
+@app.route('/api/')
+def api_docs():
+    """Documentation de l'API"""
+    return '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>API Vote Scolaire 2026 - Documentation</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            h1 { color: #333; }
+            .endpoint { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+            code { background: #eee; padding: 2px 5px; }
+        </style>
+    </head>
+    <body>
+        <h1>API Vote Scolaire 2026</h1>
+        <p><a href="/">Retour à l'application</a></p>
+        
+        <div class="endpoint">
+            <h3>GET <code>/api/election</code></h3>
+            <p>Récupère l'élection active avec les candidats</p>
+        </div>
+        
+        <div class="endpoint">
+            <h3>POST <code>/api/vote</code></h3>
+            <p>Enregistre un vote</p>
+            <p>Body JSON: {"professeur_email": "email@ecole.fr", "candidate_id": 1}</p>
+        </div>
+        
+        <div class="endpoint">
+            <h3>GET <code>/api/results</code></h3>
+            <p>Résultats en temps réel</p>
+        </div>
+        
+        <div class="endpoint">
+            <h3>GET <code>/api/stats</code></h3>
+            <p>Statistiques détaillées</p>
+        </div>
+        
+        <div class="endpoint">
+            <h3>GET <code>/api/status</code></h3>
+            <p>Statut du système</p>
+        </div>
+        
+        <div class="endpoint">
+            <h3>POST <code>/api/verify-email</code></h3>
+            <p>Vérifie si un email a déjà voté</p>
+            <p>Body JSON: {"email": "email@ecole.fr"}</p>
+        </div>
+    </body>
+    </html>
+    '''
 
 # ==================== INITIALISATION ====================
 
@@ -258,190 +330,6 @@ def check_election_status(election):
             print(f"⏰ L'élection est terminée depuis: {fin.strftime('%d/%m/%Y %H:%M')} GMT")
 
 # ==================== ROUTES API ====================
-
-@app.route('/')
-def home():
-    try:
-        db_status = "connecté"
-        election = Election.query.filter_by(statut='active').first()
-        candidates_count = Candidate.query.count() if Candidate else 0
-        votes_count = Vote.query.count() if Vote else 0
-        
-        if election:
-            debut = ensure_timezone(election.date_debut)
-            fin = ensure_timezone(election.date_fin)
-            election_info = f"{election.titre} - {election.get_temps_restant()}"
-        else:
-            election_info = "Aucune élection active"
-            debut = fin = None
-            
-    except:
-        db_status = "non connecté"
-        election_info = "Erreur connexion"
-        candidates_count = 0
-        votes_count = 0
-        debut = fin = None
-    
-    return f'''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>API Vote Scolaire 2026</title>
-        <style>
-            body {{
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                max-width: 900px;
-                margin: 40px auto;
-                padding: 30px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-            }}
-            .container {{
-                background: rgba(255, 255, 255, 0.95);
-                color: #333;
-                padding: 40px;
-                border-radius: 15px;
-                box-shadow: 0 15px 35px rgba(0,0,0,0.2);
-            }}
-            h1 {{ 
-                color: #4361ee; 
-                margin-top: 0;
-                border-bottom: 3px solid #4361ee;
-                padding-bottom: 15px;
-            }}
-            .info-card {{
-                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-                padding: 25px;
-                border-radius: 12px;
-                margin: 25px 0;
-                border-left: 5px solid #7209b7;
-            }}
-            .time-info {{
-                background: #e7f3ff;
-                padding: 20px;
-                border-radius: 10px;
-                margin: 20px 0;
-                border: 2px dashed #4cc9f0;
-            }}
-            .endpoint {{
-                background: white;
-                padding: 20px;
-                margin: 15px 0;
-                border-radius: 10px;
-                border-left: 5px solid #4361ee;
-                box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-                transition: transform 0.2s;
-            }}
-            .endpoint:hover {{ transform: translateX(5px); }}
-            code {{
-                background: #e9ecef;
-                padding: 4px 10px;
-                border-radius: 4px;
-                font-family: 'Courier New', monospace;
-                font-size: 0.9em;
-            }}
-            a {{
-                color: #4361ee;
-                text-decoration: none;
-                font-weight: bold;
-            }}
-            a:hover {{ text-decoration: underline; }}
-            .stats {{
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-                gap: 15px;
-                margin: 25px 0;
-            }}
-            .stat-item {{
-                background: white;
-                padding: 20px;
-                border-radius: 10px;
-                text-align: center;
-                box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            }}
-            .stat-value {{
-                font-size: 2em;
-                font-weight: bold;
-                color: #4361ee;
-                display: block;
-            }}
-            .year-badge {{
-                background: #f72585;
-                color: white;
-                padding: 5px 15px;
-                border-radius: 20px;
-                font-weight: bold;
-                display: inline-block;
-                margin-left: 10px;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1>🚀 API Vote Scolaire <span class="year-badge">2026</span></h1>
-            <div class="info-card">
-                <h3>🗄️ Base de données : PostgreSQL • vote</h3>
-                <p><strong>Statut :</strong> {db_status}</p>
-                <p><strong>Élection :</strong> {election_info}</p>
-            </div>
-            
-            <div class="time-info">
-                <h3>⏰ Période de vote 2026 :</h3>
-                <p><strong>Début :</strong> 8 février 2026, 00h00 GMT</p>
-                <p><strong>Fin :</strong> 10 février 2026, 23h59 GMT</p>
-                <p><strong>⚠️ Un seul vote par professeur</strong></p>
-            </div>
-            
-            <div class="stats">
-                <div class="stat-item">
-                    <span class="stat-value">{candidates_count}</span>
-                    <span>Candidates</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-value">{votes_count}</span>
-                    <span>Votes</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-value">5</span>
-                    <span>Classes</span>
-                </div>
-            </div>
-            
-            <h2>📡 Endpoints API :</h2>
-            
-            <div class="endpoint">
-                <h3>GET <code>/api/election</code></h3>
-                <p>Récupère l'élection active avec les 5 candidates</p>
-                <a href="/api/election" target="_blank">Tester →</a>
-            </div>
-            
-            <div class="endpoint">
-                <h3>POST <code>/api/vote</code></h3>
-                <p>Enregistre un vote (JSON requis)</p>
-                <small><code>{{"professeur_email": "email@ecole.fr", "candidate_id": 1}}</code></small>
-            </div>
-            
-            <div class="endpoint">
-                <h3>GET <code>/api/results</code></h3>
-                <p>Résultats en temps réel</p>
-                <a href="/api/results" target="_blank">Tester →</a>
-            </div>
-            
-            <div class="endpoint">
-                <h3>GET <code>/api/stats</code></h3>
-                <p>Statistiques détaillées</p>
-                <a href="/api/stats" target="_blank">Tester →</a>
-            </div>
-            
-            <div class="endpoint">
-                <h3>GET <code>/api/status</code></h3>
-                <p>Statut complet du système</p>
-                <a href="/api/status" target="_blank">Tester →</a>
-            </div>
-        </div>
-    </body>
-    </html>
-    '''
 
 @app.route('/api/status', methods=['GET'])
 def get_system_status():
@@ -663,7 +551,7 @@ def get_results():
 
 @app.route('/api/stats', methods=['GET'])
 def get_statistics():
-    """Statistiques détaillées - CORRIGÉ POUR LES TIMEZONES"""
+    """Statistiques détaillées"""
     try:
         election = Election.query.filter_by(statut='active').first()
         if not election:
@@ -672,11 +560,10 @@ def get_statistics():
         total_votes = Vote.query.filter_by(election_id=election.id).count()
         total_candidates = Candidate.query.filter_by(election_id=election.id).count()
         
-        # CORRECTION : Utiliser timezone dans les requêtes
         now_utc = datetime.now(timezone.utc)
         today_utc = now_utc.date()
         
-        # Votes par heure aujourd'hui - Version corrigée
+        # Votes par heure aujourd'hui
         votes_by_hour = db.session.query(
             db.func.extract('hour', Vote.date_vote).label('hour'),
             db.func.count().label('count')
@@ -695,7 +582,7 @@ def get_statistics():
             Candidate.election_id == election.id
         ).order_by(Candidate.votes_count.desc()).all()
         
-        # Dernières 24 heures - Version corrigée
+        # Dernières 24 heures
         yesterday_utc = now_utc - timedelta(hours=24)
         last_24h = db.session.query(
             db.func.count().label('count')
@@ -819,7 +706,7 @@ if __name__ == '__main__':
     
     print("=" * 80)
     print("📡 SERVEUR FLASK DÉMARRÉ")
-    print("🌐 URL : http://localhost:5000")
+    print("🌐 Application : http://localhost:5000")
     print("📋 API Élection  : http://localhost:5000/api/election")
     print("📊 API Résultats : http://localhost:5000/api/results")
     print("📈 API Statistiques : http://localhost:5000/api/stats")
@@ -833,3 +720,4 @@ if __name__ == '__main__':
     print("=" * 80)
     
     app.run(debug=True, port=5000, host='0.0.0.0')
+    sys.modules['psycopg2'] = __import__('psycopg2-binary')
