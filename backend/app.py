@@ -1,12 +1,10 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import text
 from datetime import datetime, timedelta, timezone
 import os
 from dotenv import load_dotenv
-import socket
-import sys
+import sqlite3
 
 # Charger les variables d'environnement
 load_dotenv()
@@ -28,101 +26,24 @@ if os.path.exists(FRONTEND_PATH):
 app = Flask(__name__, static_folder=FRONTEND_PATH if os.path.exists(FRONTEND_PATH) else None)
 CORS(app)
 
-# ==================== CONFIGURATION BASE DE DONNÉES AVEC SSL ====================
+# ==================== CONFIGURATION SQLITE SIMPLE ====================
 
-def fix_database_url_for_render(db_url):
-    """Corrige l'URL de base de données pour Render avec SSL"""
-    if not db_url:
-        return None
-    
-    print(f"🔍 Analyse URL DB: {db_url[:60]}...")
-    
-    # Conversion postgres:// → postgresql://
-    if db_url.startswith('postgres://'):
-        db_url = db_url.replace('postgres://', 'postgresql://', 1)
-    
-    # CORRECTION SPÉCIFIQUE POUR RENDER : Ajout du domaine .render.com
-    if 'dpg-' in db_url and '-a' in db_url and '.render.com' not in db_url:
-        parts = db_url.split('@')
-        if len(parts) == 2:
-            host_part = parts[1].split('/')[0]
-            # Ajouter .frankfurt-postgres.render.com si manquant
-            if 'frankfurt-postgres.render.com' not in host_part:
-                corrected_host = f"{host_part}.frankfurt-postgres.render.com"
-                db_url = db_url.replace(f"@{host_part}", f"@{corrected_host}")
-                print(f"✅ URL corrigée pour Render Frankfurt: {db_url[:70]}...")
-    
-    # NE PAS AJOUTER LE PORT - Render gère ça automatiquement
-    
-    # Ajouter les paramètres SSL si manquants
-    if '?sslmode=' not in db_url:
-        db_url += '?sslmode=require'
-        print(f"✅ SSL mode ajouté à l'URL")
-    
-    return db_url
+# Chemin de la base de données SQLite
+SQLITE_DB_PATH = os.path.join(BASE_DIR, 'votes.db')
 
-def test_database_connection(db_url):
-    """Teste la connexion à la base de données"""
-    if not db_url:
-        return False
-    
-    try:
-        # Extraire le hostname de l'URL
-        if '@' in db_url:
-            host_part = db_url.split('@')[1].split(':')[0].split('/')[0]
-            
-            print(f"🔍 Test de résolution DNS pour: {host_part}")
-            try:
-                ip_address = socket.gethostbyname(host_part)
-                print(f"✅ DNS résolu: {host_part} → {ip_address}")
-                return True
-            except socket.gaierror as dns_error:
-                print(f"❌ Échec DNS: {host_part}")
-                print(f"   Erreur: {dns_error}")
-                return False
-    except Exception as e:
-        print(f"❌ Erreur lors du test de connexion: {e}")
-        return False
+# URL SQLite pour SQLAlchemy
+DATABASE_URL = f"sqlite:///{SQLITE_DB_PATH}"
 
-# URL CORRECTE POUR RENDER FRANKFURT AVEC SSL (SANS PORT)
-DATABASE_URL_CORRECTE = "postgresql://vote_user:sVZxXHKa3RfuRfS2SkcSJUuIJ8C0KMpF@dpg-d64t7q24d50c73e0n9nn0-a.frankfurt-postgres.render.com/vote_vq45?sslmode=require"
+print(f"🔗 Base de données SQLite: {SQLITE_DB_PATH}")
 
-print(f"🔗 URL correcte avec SSL configurée: {DATABASE_URL_CORRECTE[:70]}...")
-
-# Obtenir l'URL de l'environnement ou utiliser l'URL corrigée
-database_url = os.getenv('DATABASE_URL', DATABASE_URL_CORRECTE)
-
-# Si l'URL contient une erreur (eo9nn0 au lieu de e0n9nn0), la corriger
-if 'eo9nn0' in database_url:
-    print("⚠️  Correction de l'erreur dans le nom d'hôte (eo9nn0 → e0n9nn0)")
-    database_url = database_url.replace('eo9nn0', 'e0n9nn0')
-
-# Corriger l'URL pour Render si nécessaire
-database_url = fix_database_url_for_render(database_url)
-
-# Tester la connexion avant de configurer Flask
-print("🔍 Test de connexion à la base de données...")
-if test_database_connection(database_url):
-    print("✅ Test DNS réussi")
-else:
-    print("❌ Test DNS échoué")
-    print(f"💡 URL testée: {database_url[:80]}...")
-
-# Configuration Flask avec options SQLAlchemy pour SSL
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+# Configuration Flask
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_pre_ping': True,
-    'pool_recycle': 300,
-    'pool_size': 10,
-    'max_overflow': 20,
-    'pool_timeout': 30,
-}
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev_secret_key_2026_vote_scolaire')
 
 db = SQLAlchemy(app)
 
-# ==================== MODÈLES (inchangé) ====================
+# ==================== MODÈLES (IDENTIQUES À VOTRE CODE) ====================
 
 class Election(db.Model):
     __tablename__ = 'elections'
@@ -216,22 +137,9 @@ class Vote(db.Model):
     
     __table_args__ = (
         db.UniqueConstraint('election_id', 'professeur_email', name='unique_vote_per_election'),
-        db.Index('idx_votes_prof_email', 'professeur_email'),
-        db.Index('idx_votes_date', 'date_vote'),
-        db.Index('idx_votes_election_candidate', 'election_id', 'candidate_id')
     )
-    
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'election_id': self.election_id,
-            'candidate_id': self.candidate_id,
-            'professeur_email': self.professeur_email,
-            'date_vote': self.date_vote.isoformat() if self.date_vote else None,
-            'created_at': self.created_at.isoformat() if self.created_at else None
-        }
 
-# ==================== ROUTES POUR LE FRONTEND ====================
+# ==================== ROUTES POUR LE FRONTEND (IDENTIQUES) ====================
 
 @app.route('/')
 def index():
@@ -339,7 +247,7 @@ def api_docs():
     </html>
     '''
 
-# ==================== INITIALISATION AVEC GESTION D'ERREURS SSL ====================
+# ==================== INITIALISATION ====================
 
 def ensure_timezone(dt):
     """Assure qu'une datetime a un timezone UTC"""
@@ -350,23 +258,14 @@ def ensure_timezone(dt):
     return dt.astimezone(timezone.utc)
 
 def init_database():
-    """Initialise la base de données avec gestion d'erreurs SSL"""
+    """Initialise la base de données SQLite"""
     with app.app_context():
         try:
-            print(f"🔗 Tentative de connexion à la base de données avec SSL...")
-            print(f"📊 URL: {database_url[:60]}...")  # Afficher partiellement pour sécurité
-            
-            # Test de connexion simple d'abord
-            try:
-                result = db.session.execute(text('SELECT 1'))
-                print("✅ Connexion SSL réussie (test SELECT 1)")
-            except Exception as test_error:
-                print(f"❌ Échec test connexion: {test_error}")
-                raise
+            print(f"🔗 Initialisation de SQLite...")
             
             # Créer les tables si elles n'existent pas
             db.create_all()
-            print("✅ Tables créées/vérifiées avec succès")
+            print("✅ Tables SQLite créées/vérifiées")
             
             # Vérifier si une élection existe
             election = Election.query.filter_by(statut='active').first()
@@ -392,15 +291,15 @@ def init_database():
             if candidates_count == 0:
                 candidates_data = [
                     {'nom': 'Martin', 'prenom': 'Léa', 'classe': '6ème',
-                     'description': 'Sérieuse, à l\'écoute, toujours prête à aider ses camarades.'},
+                     'description': 'Sérieuse, à l\'écoute, toujours prête à aider ses camarades. Projet : organiser des séances de tutorat entre élèves.'},
                     {'nom': 'Dubois', 'prenom': 'Thomas', 'classe': '5ème',
-                     'description': 'Dynamique, créatif, bon communicateur.'},
+                     'description': 'Dynamique, créatif, bon communicateur. Projet : créer un journal scolaire numérique.'},
                     {'nom': 'Bernard', 'prenom': 'Emma', 'classe': '4ème',
-                     'description': 'Organisée, impliquée dans la vie scolaire.'},
+                     'description': 'Organisée, impliquée dans la vie scolaire. Projet : améliorer l\'ambiance dans les couloirs.'},
                     {'nom': 'Petit', 'prenom': 'Lucas', 'classe': '3ème',
-                     'description': 'Responsable, expérimenté.'},
+                     'description': 'Responsable, expérimenté. Projet : organiser des sessions de révision pour le brevet.'},
                     {'nom': 'Durand', 'prenom': 'Chloé', 'classe': '2nde',
-                     'description': 'Mature, motivée.'}
+                     'description': 'Mature, motivée. Projet : créer des activités inter-niveaux entre collège et lycée.'}
                 ]
                 
                 for cand_data in candidates_data:
@@ -420,37 +319,54 @@ def init_database():
             total_votes = Vote.query.count()
             print(f"📊 Total votes enregistrés : {total_votes}")
             
+            # Afficher le statut actuel
+            check_election_status(election)
+            
             return True
             
         except Exception as e:
-            print(f"❌ Erreur d'initialisation: {str(e)}")
-            print("💡 Si c'est une erreur SSL, assurez-vous que:")
-            print("   1. L'URL contient '?sslmode=require'")
-            print("   2. La base de données accepte les connexions SSL")
-            print("   3. Vous utilisez la bonne URL complète")
-            
+            print(f"❌ Erreur d'initialisation SQLite: {str(e)}")
             import traceback
             traceback.print_exc()
-            
             return False
 
-# ==================== ROUTES API ====================
+def check_election_status(election):
+    """Vérifie et affiche le statut actuel de l'élection"""
+    now = datetime.now(timezone.utc)
+    
+    debut = ensure_timezone(election.date_debut)
+    fin = ensure_timezone(election.date_fin)
+    
+    if debut:
+        if now < debut:
+            diff = debut - now
+            heures = diff.seconds // 3600
+            minutes = (diff.seconds % 3600) // 60
+            print(f"⏳ L'élection débutera le: {debut.strftime('%d/%m/%Y %H:%M')} GMT")
+            print(f"   Début dans: {diff.days}j {heures}h {minutes}m")
+        else:
+            print(f"✅ L'élection a commencé le: {debut.strftime('%d/%m/%Y %H:%M')} GMT")
+    
+    if fin:
+        if now < fin:
+            diff = fin - now
+            jours = diff.days
+            heures = diff.seconds // 3600
+            minutes = (diff.seconds % 3600) // 60
+            print(f"⏰ Temps restant: {jours}j {heures}h {minutes}m")
+            print(f"   Fin prévue: {fin.strftime('%d/%m/%Y %H:%M')} GMT")
+        else:
+            print(f"⏰ L'élection est terminée depuis: {fin.strftime('%d/%m/%Y %H:%M')} GMT")
+
+# ==================== ROUTES API (IDENTIQUES) ====================
 
 @app.route('/api/status', methods=['GET'])
 def get_system_status():
     """Retourne le statut complet du système"""
     try:
-        # Si la base de données n'est pas disponible, retournez un statut minimal
-        election = None
-        candidates_count = 0
-        votes_count = 0
-        
-        try:
-            election = Election.query.filter_by(statut='active').first()
-            candidates_count = Candidate.query.count() if Candidate.query.first() else 0
-            votes_count = Vote.query.count()
-        except Exception:
-            pass  # La base de données n'est pas disponible
+        election = Election.query.filter_by(statut='active').first()
+        candidates_count = Candidate.query.count() if Candidate.query.first() else 0
+        votes_count = Vote.query.count()
         
         now = datetime.now(timezone.utc)
         status = "inactive"
@@ -473,16 +389,16 @@ def get_system_status():
             'system': {
                 'status': 'online',
                 'timestamp': now.isoformat(),
-                'database': 'PostgreSQL (connexion en cours)',
+                'database': 'SQLite (fichier local)',
                 'environment': os.getenv('RENDER', 'development'),
                 'year': 2026
             },
             'election': {
                 'status': status,
-                'title': election.titre if election else "Élection des Délégués 2026",
-                'date_debut': election.date_debut.isoformat() if election else "2026-02-08T00:00:00Z",
-                'date_fin': election.date_fin.isoformat() if election else "2026-02-10T23:59:59Z",
-                'temps_restant': election.get_temps_restant() if election else "2j 23h 59m",
+                'title': election.titre if election else None,
+                'date_debut': election.date_debut.isoformat() if election else None,
+                'date_fin': election.date_fin.isoformat() if election else None,
+                'temps_restant': election.get_temps_restant() if election else None,
                 'can_vote': can_vote
             },
             'statistics': {
@@ -497,7 +413,6 @@ def get_system_status():
             'system': {
                 'status': 'online',
                 'timestamp': datetime.now(timezone.utc).isoformat(),
-                'error': 'Base de données temporairement indisponible',
                 'year': 2026
             }
         })
@@ -508,23 +423,7 @@ def get_election():
     try:
         election = Election.query.filter_by(statut='active').first()
         if not election:
-            # Retourner une élection par défaut si la base n'est pas disponible
-            return jsonify({
-                'id': 1,
-                'titre': "Élection des Délégués Élèves - Février 2026",
-                'description': "Vote des professeurs pour élire les délégués élèves (6ème à 2nde).",
-                'date_debut': "2026-02-08T00:00:00Z",
-                'date_fin': "2026-02-10T23:59:59Z",
-                'statut': 'active',
-                'temps_restant': "2j 23h 59m",
-                'candidates': [
-                    {'id': 1, 'nom': 'Martin', 'prenom': 'Léa', 'classe': '6ème', 'votes_count': 0},
-                    {'id': 2, 'nom': 'Dubois', 'prenom': 'Thomas', 'classe': '5ème', 'votes_count': 0},
-                    {'id': 3, 'nom': 'Bernard', 'prenom': 'Emma', 'classe': '4ème', 'votes_count': 0},
-                    {'id': 4, 'nom': 'Petit', 'prenom': 'Lucas', 'classe': '3ème', 'votes_count': 0},
-                    {'id': 5, 'nom': 'Durand', 'prenom': 'Chloé', 'classe': '2nde', 'votes_count': 0}
-                ]
-            })
+            return jsonify({'error': 'Aucune élection active'}), 404
         
         candidates = Candidate.query.filter_by(election_id=election.id).all()
         
@@ -534,12 +433,246 @@ def get_election():
         return jsonify(result)
     except Exception as e:
         print(f"❌ Erreur récupération élection: {str(e)}")
-        return jsonify({
-            'error': 'Base de données temporairement indisponible',
-            'message': 'Le système fonctionne en mode limité'
-        }), 503
+        return jsonify({'error': str(e)}), 500
 
-# ... (les autres routes restent inchangées)
+@app.route('/api/vote', methods=['POST'])
+def submit_vote():
+    """Enregistre un nouveau vote avec vérification complète"""
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'Données JSON requises'}), 400
+        
+        professeur_email = data.get('professeur_email')
+        candidate_id = data.get('candidate_id')
+        
+        if not professeur_email:
+            return jsonify({'error': 'professeur_email est requis'}), 400
+        
+        if not candidate_id:
+            return jsonify({'error': 'candidate_id est requis'}), 400
+        
+        # Validation email
+        if '@' not in professeur_email or '.' not in professeur_email:
+            return jsonify({'error': 'Email invalide'}), 400
+        
+        # Convertir candidate_id en int
+        try:
+            candidate_id = int(candidate_id)
+        except ValueError:
+            return jsonify({'error': 'candidate_id doit être un nombre valide'}), 400
+        
+        # Vérifier si l'élection est active
+        election = Election.query.filter_by(statut='active').first()
+        if not election:
+            return jsonify({'error': 'Aucune élection active'}), 400
+        
+        # Vérifier les dates de l'élection (avec timezones)
+        now = datetime.now(timezone.utc)
+        debut = ensure_timezone(election.date_debut)
+        fin = ensure_timezone(election.date_fin)
+        
+        # Vérifier si l'élection a commencé
+        if debut and now < debut:
+            return jsonify({'error': f'L\'élection n\'a pas encore commencé. Début: {debut.strftime("%d/%m/%Y %H:%M")} GMT'}), 400
+        
+        # Vérifier si l'élection est terminée
+        if fin and now > fin:
+            return jsonify({'error': f'L\'élection est terminée depuis le {fin.strftime("%d/%m/%Y %H:%M")} GMT'}), 400
+        
+        # Vérifier si le professeur a déjà voté
+        existing_vote = Vote.query.filter_by(
+            election_id=election.id,
+            professeur_email=professeur_email
+        ).first()
+        
+        if existing_vote:
+            return jsonify({'error': 'Ce professeur a déjà voté'}), 400
+        
+        # Vérifier si la candidate existe
+        candidate = Candidate.query.filter_by(id=candidate_id, election_id=election.id).first()
+        if not candidate:
+            return jsonify({'error': 'Candidat non trouvé'}), 404
+        
+        # Créer le vote
+        vote = Vote(
+            election_id=election.id,
+            candidate_id=candidate_id,
+            professeur_email=professeur_email,
+            ip_address=request.remote_addr,
+            user_agent=request.user_agent.string
+        )
+        
+        # Mettre à jour le compteur de votes
+        candidate.votes_count = candidate.votes_count + 1
+        
+        db.session.add(vote)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Vote enregistré avec succès',
+            'vote': vote.to_dict(),
+            'candidate': candidate.to_dict(),
+            'election_status': 'Vote accepté',
+            'votes_count': candidate.votes_count,
+            'year': 2026
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Erreur lors du vote: {str(e)}")
+        return jsonify({'error': f'Erreur serveur: {str(e)}'}), 500
+
+@app.route('/api/results', methods=['GET'])
+def get_results():
+    """Récupère les résultats du vote"""
+    try:
+        election = Election.query.filter_by(statut='active').first()
+        if not election:
+            return jsonify({'error': 'Aucune élection active'}), 404
+        
+        candidates = Candidate.query.filter_by(election_id=election.id).all()
+        total_votes = sum(c.votes_count for c in candidates)
+        
+        results = []
+        for candidate in candidates:
+            percentage = (candidate.votes_count / total_votes * 100) if total_votes > 0 else 0
+            results.append({
+                'candidate': candidate.to_dict(),
+                'votes': candidate.votes_count,
+                'percentage': round(percentage, 2),
+                'rank': None
+            })
+        
+        results.sort(key=lambda x: x['votes'], reverse=True)
+        for i, result in enumerate(results, 1):
+            result['rank'] = i
+        
+        return jsonify({
+            'election': election.to_dict(),
+            'total_votes': total_votes,
+            'results': results,
+            'updated_at': datetime.now(timezone.utc).isoformat(),
+            'year': 2026
+        })
+    except Exception as e:
+        print(f"❌ Erreur résultats: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/stats', methods=['GET'])
+def get_statistics():
+    """Statistiques détaillées"""
+    try:
+        election = Election.query.filter_by(statut='active').first()
+        if not election:
+            return jsonify({'error': 'Aucune élection active'}), 404
+        
+        total_votes = Vote.query.filter_by(election_id=election.id).count()
+        total_candidates = Candidate.query.filter_by(election_id=election.id).count()
+        
+        now_utc = datetime.now(timezone.utc)
+        
+        # Temps restant
+        fin = ensure_timezone(election.date_fin)
+        temps_restant = fin - now_utc if fin and fin > now_utc else timedelta(0)
+        
+        # Dernières 24 heures
+        yesterday_utc = now_utc - timedelta(hours=24)
+        last_24h = Vote.query.filter(
+            Vote.date_vote >= yesterday_utc,
+            Vote.election_id == election.id
+        ).count()
+        
+        return jsonify({
+            'election': election.to_dict(),
+            'statistics': {
+                'total_votes': total_votes,
+                'total_candidates': total_candidates,
+                'votes_last_24h': last_24h,
+                'participation_rate': round((total_votes / 50 * 100), 2) if total_votes > 0 else 0,
+                'temps_restant_jours': temps_restant.days,
+                'temps_restant_heures': int(temps_restant.seconds // 3600)
+            },
+            'periode_vote': {
+                'date_debut': election.date_debut.isoformat() if election.date_debut else None,
+                'date_fin': election.date_fin.isoformat() if election.date_fin else None,
+                'vote_actif': election.date_debut and election.date_fin and (election.date_debut <= now_utc <= election.date_fin)
+            },
+            'year': 2026,
+            'updated_at': now_utc.isoformat()
+        })
+    except Exception as e:
+        print(f"❌ Erreur statistiques: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/verify-email', methods=['POST'])
+def verify_email():
+    """Vérifie si un email a déjà voté"""
+    try:
+        data = request.json
+        email = data.get('email')
+        
+        if not email:
+            return jsonify({'error': 'Email requis'}), 400
+        
+        election = Election.query.filter_by(statut='active').first()
+        if not election:
+            return jsonify({'error': 'Aucune élection active'}), 404
+        
+        vote = Vote.query.filter_by(
+            election_id=election.id,
+            professeur_email=email
+        ).first()
+        
+        # Vérifier aussi si l'élection est en cours
+        now = datetime.now(timezone.utc)
+        debut = ensure_timezone(election.date_debut)
+        fin = ensure_timezone(election.date_fin)
+        
+        can_vote = debut and fin and (debut <= now <= fin)
+        
+        return jsonify({
+            'has_voted': vote is not None,
+            'email': email,
+            'election_id': election.id,
+            'election_title': election.titre,
+            'can_vote': can_vote,
+            'vote_period': f"{debut.strftime('%d/%m/%Y %H:%M') if debut else 'N/A'} GMT - {fin.strftime('%d/%m/%Y %H:%M') if fin else 'N/A'} GMT",
+            'year': 2026
+        })
+    except Exception as e:
+        print(f"❌ Erreur vérification email: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/reset-test', methods=['POST'])
+def reset_test_data():
+    """Réinitialise les données de test (uniquement pour le développement)"""
+    try:
+        # Vérifier que nous ne sommes pas en production
+        if os.getenv('RENDER') and 'production' in os.getenv('RENDER', '').lower():
+            return jsonify({'error': 'Cette action n\'est pas autorisée en production'}), 403
+        
+        # Supprimer tous les votes
+        Vote.query.delete()
+        
+        # Réinitialiser les compteurs de votes
+        candidates = Candidate.query.all()
+        for candidate in candidates:
+            candidate.votes_count = 0
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Données de test réinitialisées',
+            'votes_deleted': True,
+            'candidates_reset': len(candidates),
+            'year': 2026
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 # ==================== LANCEMENT ====================
 
@@ -547,28 +680,33 @@ if __name__ == '__main__':
     print("=" * 80)
     print("🚀 DÉMARRAGE DU SYSTÈME DE VOTE SCOLAIRE 2026")
     print("=" * 80)
-    print("🗄️  BASE DE DONNÉES : PostgreSQL avec SSL")
+    print("🗄️  BASE DE DONNÉES : SQLite (fichier local)")
     print("=" * 80)
     
     # Initialiser la base de données
     db_initialized = init_database()
     
-    if db_initialized:
-        print("✅ Base de données initialisée avec succès")
-    else:
-        print("⚠️  Base de données non initialisée - Mode API seule activé")
-        print("💡 L'application fonctionnera avec des données par défaut")
+    if not db_initialized:
+        print("❌ ATTENTION: Base de données non initialisée correctement")
+        print("💡 L'application démarrera mais certaines fonctionnalités pourraient ne pas fonctionner")
     
     print("=" * 80)
     print("📡 SERVEUR FLASK DÉMARRÉ")
     
+    # Obtenir le port de Render ou utiliser 10000
     port = int(os.getenv('PORT', 10000))
     
     print(f"🌐 Port d'écoute: {port}")
-    print(f"🔗 URL publique: https://vote-scolaire.onrender.com")
-    print(f"📋 API Status: https://vote-scolaire.onrender.com/api/status")
+    print(f"📋 API Élection  : http://localhost:{port}/api/election")
+    print(f"📊 API Résultats : http://localhost:{port}/api/results")
+    print(f"📈 API Statistiques : http://localhost:{port}/api/stats")
+    print(f"⚙️  API Status    : http://localhost:{port}/api/status")
     print("=" * 80)
-    print("⏰ PÉRIODE DE VOTE 2026 : 8-10 février")
+    print("⏰ PÉRIODE DE VOTE 2026 :")
+    print("   Début : 8 février 2026, 00h00 GMT")
+    print("   Fin   : 10 février 2026, 23h59 GMT")
+    print("=" * 80)
+    print("👨‍🏫 PRÊT POUR LES VOTES DES PROFESSEURS !")
     print("=" * 80)
     
     app.run(debug=False, port=port, host='0.0.0.0')
