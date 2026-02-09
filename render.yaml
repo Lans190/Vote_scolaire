@@ -2,16 +2,16 @@ services:
   - type: web
     name: vote-scolaire
     env: python
-    region: frankfurt  # Ou la région la plus proche
+    region: frankfurt
     plan: free
     runtime: python
-    pythonVersion: 3.11.9  
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: gunicorn backend.app:app
+    pythonVersion: "3.11.9"
+    buildCommand: |
+      pip install -r backend/requirements.txt
+    startCommand: |
+      cd backend && gunicorn app:app --bind=0.0.0.0:$PORT
     envVars:
       - key: DATABASE_URL
         value: postgresql://vote_user:sVZxXHKa3RfuRfS2SkcSJUuIJ8C0KMpF@dpg-d64t7q24d50c73eo9nn0-a:5432/vote_vq45
       - key: SECRET_KEY
-        value: votre_secret_key_secure_2026
-    healthCheckPath: /api/status
-    autoDeploy: true
+        value: vote-scolaire-2026-secret
