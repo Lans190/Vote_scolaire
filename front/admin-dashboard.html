@@ -1,46 +1,675 @@
-@app.route('/admin-login')
-def admin_login():
-    """Page de connexion admin"""
-    try:
-        return send_from_directory(FRONTEND_PATH, 'admin-login.html')
-    except:
-        return '''
-        <!DOCTYPE html>
-        <html>
-        <head><title>Admin Login</title></head>
-        <body>
-            <h1>Connexion Admin</h1>
-            <form onsubmit="login()">
-                <input type="password" id="password" placeholder="Mot de passe admin">
-                <button>Se connecter</button>
-            </form>
-            <script>
-                function login() {
-                    event.preventDefault();
-                    if(document.getElementById('password').value === 'admin2026') {
-                        window.location.href = '/admin-dashboard.html';
-                    } else {
-                        alert('Mot de passe incorrect');
-                    }
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de Bord Admin - Élections 2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, #0d47a1, #311b92);
+            color: white;
+            padding: 0 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .navbar-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .navbar-brand i {
+            font-size: 1.8rem;
+            color: #64b5f6;
+        }
+        
+        .navbar-brand h1 {
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+        
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.1);
+            padding: 8px 16px;
+            border-radius: 50px;
+        }
+        
+        .logout-btn {
+            background: #ff5252;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .logout-btn:hover {
+            background: #ff1744;
+            transform: translateY(-2px);
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        
+        .dashboard-header {
+            margin-bottom: 40px;
+        }
+        
+        .dashboard-header h2 {
+            font-size: 2rem;
+            color: #0d47a1;
+            margin-bottom: 10px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+            transition: transform 0.3s;
+            border-left: 5px solid #0d47a1;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card.votes {
+            border-left-color: #4caf50;
+        }
+        
+        .stat-card.candidates {
+            border-left-color: #2196f3;
+        }
+        
+        .stat-card.users {
+            border-left-color: #9c27b0;
+        }
+        
+        .stat-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        
+        .stat-card.votes .stat-icon {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .stat-card.candidates .stat-icon {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+        
+        .stat-card.users .stat-icon {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #333;
+        }
+        
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .action-btn {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .action-btn:hover {
+            border-color: #0d47a1;
+            background: #f8fdff;
+            transform: translateY(-3px);
+        }
+        
+        .action-btn i {
+            font-size: 2.5rem;
+            color: #0d47a1;
+        }
+        
+        .danger-zone {
+            background: #ffebee;
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 40px;
+            border: 2px dashed #f44336;
+        }
+        
+        .danger-zone h3 {
+            color: #c62828;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .danger-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .cancel-btn {
+            background: #e0e0e0;
+            color: #333;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            flex: 1;
+        }
+        
+        .confirm-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            flex: 1;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .alert-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #4caf50;
+        }
+        
+        .alert-error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #f44336;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+            border-top: 1px solid #eee;
+            margin-top: 40px;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-content">
+            <div class="navbar-brand">
+                <i class="fas fa-tachometer-alt"></i>
+                <h1>Tableau de Bord Administrateur</h1>
+            </div>
+            <div class="user-menu">
+                <div class="user-info" id="userInfo">
+                    <i class="fas fa-user-shield"></i>
+                    <span>Administrateur</span>
+                </div>
+                <a href="/admin-login" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Déconnexion
+                </a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <div class="dashboard-header">
+            <h2><i class="fas fa-chart-line"></i> Vue d'ensemble</h2>
+            <p>Gestion du système de vote électronique - Élections 2026</p>
+        </div>
+        
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card votes">
+                <div class="stat-header">
+                    <div class="stat-icon">
+                        <i class="fas fa-vote-yea"></i>
+                    </div>
+                    <div>
+                        <h3>Votes Totaux</h3>
+                        <p>Nombre total de votes enregistrés</p>
+                    </div>
+                </div>
+                <div class="stat-value" id="totalVotes">0</div>
+            </div>
+            
+            <div class="stat-card candidates">
+                <div class="stat-header">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div>
+                        <h3>Candidates</h3>
+                        <p>Nombre de candidates en lice</p>
+                    </div>
+                </div>
+                <div class="stat-value" id="totalCandidates">0</div>
+            </div>
+            
+            <div class="stat-card users">
+                <div class="stat-header">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <div>
+                        <h3>Taux de Participation</h3>
+                        <p>Pourcentage de votants</p>
+                    </div>
+                </div>
+                <div class="stat-value" id="participationRate">0%</div>
+            </div>
+        </div>
+        
+        <div class="alert alert-success" id="successAlert">
+            <i class="fas fa-check-circle"></i>
+            <span id="successMessage"></span>
+        </div>
+        
+        <div class="alert alert-error" id="errorAlert">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span id="errorMessage"></span>
+        </div>
+        
+        <h2 style="margin-bottom: 20px; color: #0d47a1;">
+            <i class="fas fa-cogs"></i> Actions Administratives
+        </h2>
+        
+        <div class="actions-grid">
+            <div class="action-btn" onclick="viewResults()">
+                <i class="fas fa-chart-bar"></i>
+                <h3>Résultats en Direct</h3>
+                <p>Consulter les résultats détaillés</p>
+            </div>
+            
+            <div class="action-btn" onclick="viewStats()">
+                <i class="fas fa-chart-line"></i>
+                <h3>Statistiques Avancées</h3>
+                <p>Analyses et tendances</p>
+            </div>
+            
+            <div class="action-btn" onclick="openResetModal()">
+                <i class="fas fa-redo"></i>
+                <h3>Réinitialiser un Vote</h3>
+                <p>Annuler le vote d'un utilisateur</p>
+            </div>
+        </div>
+        
+        <div class="danger-zone">
+            <h3><i class="fas fa-exclamation-triangle"></i> Zone de Danger</h3>
+            <p style="margin-bottom: 20px; color: #666;">
+                Attention : Ces actions sont irréversibles.
+            </p>
+            <button class="danger-btn" onclick="openFullResetModal()">
+                <i class="fas fa-trash-alt"></i>
+                Réinitialiser Tous les Votes
+            </button>
+        </div>
+        
+        <div class="modal" id="resetModal">
+            <div class="modal-content">
+                <h3><i class="fas fa-redo"></i> Réinitialiser un Vote</h3>
+                <p>Entrez l'email de l'utilisateur :</p>
+                <input type="email" 
+                       id="resetEmail" 
+                       placeholder="exemple@ecole.com"
+                       style="width: 100%; padding: 12px; margin: 15px 0; border: 2px solid #e0e0e0; border-radius: 8px;">
+                <div class="modal-actions">
+                    <button class="cancel-btn" onclick="closeResetModal()">Annuler</button>
+                    <button class="confirm-btn" onclick="resetUserVote()">Confirmer</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal" id="fullResetModal">
+            <div class="modal-content">
+                <h3><i class="fas fa-exclamation-triangle"></i> Confirmation</h3>
+                <p style="color: #f44336; margin: 15px 0;">
+                    ⚠️ Cette action supprimera TOUS les votes.
+                </p>
+                <p>Tapez "CONFIRMER" pour continuer :</p>
+                <input type="text" 
+                       id="confirmText" 
+                       placeholder="Tapez CONFIRMER"
+                       style="width: 100%; padding: 12px; margin: 15px 0; border: 2px solid #f44336; border-radius: 8px;">
+                <div class="modal-actions">
+                    <button class="cancel-btn" onclick="closeFullResetModal()">Annuler</button>
+                    <button class="confirm-btn" onclick="resetAllVotes()" id="resetAllBtn" disabled>
+                        Réinitialiser Tous les Votes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>© 2026 - Cours privés La Source de la Fontaine | Système de Vote Électronique v2.1</p>
+    </div>
+    
+    <script>
+        // Charger les données au démarrage
+        window.onload = function() {
+            loadStats();
+        };
+        
+        async function loadStats() {
+            try {
+                // Utiliser le paramètre admin_secret
+                const response = await fetch('/api/results?admin_secret=admin2026');
+                const data = await response.json();
+                
+                if (data.error) {
+                    showError(data.error);
+                    return;
                 }
-            </script>
-        </body>
-        </html>
-        '''
-
-@app.route('/admin-dashboard')
-def admin_dashboard():
-    """Tableau de bord admin"""
-    try:
-        return send_from_directory(FRONTEND_PATH, 'admin-dashboard.html')
-    except:
-        return '''
-        <!DOCTYPE html>
-        <html>
-        <head><title>Admin Dashboard</title></head>
-        <body>
-            <h1>Tableau de bord Admin</h1>
-            <p>Redirigez-vous vers <a href="/admin-login">la page de connexion</a></p>
-        </body>
-        </html>
-        '''
+                
+                // Mettre à jour les statistiques
+                document.getElementById('totalVotes').textContent = data.total_votes;
+                document.getElementById('totalCandidates').textContent = data.candidates_count;
+                
+                // Calculer le pourcentage de participation
+                const participation = Math.min(Math.round((data.total_votes / 50) * 100), 100);
+                document.getElementById('participationRate').textContent = `${participation}%`;
+                
+            } catch (error) {
+                showError('Erreur de chargement des statistiques');
+            }
+        }
+        
+        async function viewResults() {
+            try {
+                const response = await fetch('/api/results?admin_secret=admin2026');
+                const data = await response.json();
+                
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+                
+                // Ouvrir dans un nouvel onglet
+                const resultsWindow = window.open('', '_blank');
+                resultsWindow.document.write(`
+                    <html>
+                    <head>
+                        <title>Résultats - Élections 2026</title>
+                        <style>
+                            body { font-family: Arial; padding: 30px; }
+                            .result-item { margin: 20px 0; padding: 20px; background: #f5f5f5; border-radius: 10px; }
+                            .rank { font-size: 24px; font-weight: bold; color: #0d47a1; }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>📊 Résultats Élections 2026</h1>
+                        <p>Total votes: ${data.total_votes}</p>
+                        ${data.results.map(result => `
+                            <div class="result-item">
+                                <div class="rank">#${result.rank}</div>
+                                <h3>${result.nom_complet} - ${result.classe}</h3>
+                                <p>${result.votes} votes (${result.percentage}%)</p>
+                            </div>
+                        `).join('')}
+                    </body>
+                    </html>
+                `);
+                
+            } catch (error) {
+                showError('Erreur lors du chargement des résultats');
+            }
+        }
+        
+        async function viewStats() {
+            try {
+                const response = await fetch('/api/stats?admin_secret=admin2026');
+                const data = await response.json();
+                
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+                
+                const statsWindow = window.open('', '_blank');
+                statsWindow.document.write(`
+                    <html>
+                    <head>
+                        <title>Statistiques - Élections 2026</title>
+                    </head>
+                    <body>
+                        <h1>📈 Statistiques</h1>
+                        <p>Total votes: ${data.total_votes}</p>
+                        <p>Votes dernière heure: ${data.votes_last_hour}</p>
+                        <p>Candidates: ${data.total_candidates}</p>
+                    </body>
+                    </html>
+                `);
+            } catch (error) {
+                showError('Erreur lors du chargement des statistiques');
+            }
+        }
+        
+        function openResetModal() {
+            document.getElementById('resetModal').style.display = 'flex';
+        }
+        
+        function closeResetModal() {
+            document.getElementById('resetModal').style.display = 'none';
+            document.getElementById('resetEmail').value = '';
+        }
+        
+        async function resetUserVote() {
+            const email = document.getElementById('resetEmail').value.trim();
+            
+            if (!email || !email.includes('@')) {
+                showError('Veuillez entrer un email valide');
+                return;
+            }
+            
+            if (!confirm(`Confirmez-vous la réinitialisation du vote pour ${email} ?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/admin/reset-user?admin_secret=admin2026', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email: email })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess(`Vote de ${email} réinitialisé avec succès`);
+                    closeResetModal();
+                    await loadStats();
+                } else {
+                    showError(data.error || 'Erreur lors de la réinitialisation');
+                }
+                
+            } catch (error) {
+                showError('Erreur de connexion au serveur');
+            }
+        }
+        
+        function openFullResetModal() {
+            document.getElementById('fullResetModal').style.display = 'flex';
+            document.getElementById('confirmText').addEventListener('input', function() {
+                document.getElementById('resetAllBtn').disabled = this.value.toUpperCase() !== 'CONFIRMER';
+            });
+        }
+        
+        function closeFullResetModal() {
+            document.getElementById('fullResetModal').style.display = 'none';
+            document.getElementById('confirmText').value = '';
+            document.getElementById('resetAllBtn').disabled = true;
+        }
+        
+        async function resetAllVotes() {
+            if (!confirm('⚠️ Êtes-vous ABSOLUMENT SÛR de vouloir réinitialiser TOUS les votes ?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/admin/reset-votes?admin_secret=admin2026', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess(`${data.votes_deleted} votes ont été réinitialisés`);
+                    closeFullResetModal();
+                    await loadStats();
+                } else {
+                    showError(data.error || 'Erreur lors de la réinitialisation');
+                }
+                
+            } catch (error) {
+                showError('Erreur de connexion au serveur');
+            }
+        }
+        
+        function showSuccess(message) {
+            const alert = document.getElementById('successAlert');
+            document.getElementById('successMessage').textContent = message;
+            alert.style.display = 'block';
+            
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
+        
+        function showError(message) {
+            const alert = document.getElementById('errorAlert');
+            document.getElementById('errorMessage').textContent = message;
+            alert.style.display = 'block';
+            
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Fermer les modales en cliquant à l'extérieur
+        window.onclick = function(event) {
+            if (event.target.id === 'resetModal' || event.target.id === 'fullResetModal') {
+                event.target.style.display = 'none';
+            }
+        };
+    </script>
+</body>
+</html>

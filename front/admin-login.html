@@ -63,7 +63,7 @@
         .input-group i {
             position: absolute;
             left: 20px;
-            top: 50%;
+                    top: 50%;
             transform: translateY(-50%);
             color: #4361ee;
             font-size: 1.2rem;
@@ -195,8 +195,8 @@
             }
             
             if (password === ADMIN_SECRET) {
-                // Connexion réussie - rediriger vers la page admin complète
-                window.location.href = '/admin-dashboard.html';
+                // CORRECTION IMPORTANTE : redirection sans .html
+                window.location.href = '/admin-dashboard';
             } else {
                 showError('Code incorrect. Essayez : admin2026');
             }
