@@ -1,5 +1,5 @@
 // Configuration de l'API
-const API_BASE_URL = window.location.origin;
+const API_BASE_URL = 'https://vote-scolaire.onrender.com';
 const API_ENDPOINTS = {
     election: `${API_BASE_URL}/api/election`,
     vote: `${API_BASE_URL}/api/vote`,
