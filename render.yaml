@@ -1,15 +1,14 @@
 services:
   - type: web
-    name: vote-scolaire-2026
+    name: vote-scolaire
     env: python
     buildCommand: pip install -r backend/requirements.txt
-    startCommand: gunicorn --chdir backend app:app
+    startCommand: cd backend && gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120
     envVars:
       - key: PORT
         value: 10000
       - key: PYTHON_VERSION
-        value: 3.11.8
-    disk:
-      name: votes-data
-      mountPath: /opt/render/project/src/backend
-      sizeGB: 1
+        value: 3.9.0
+      - key: SECRET_KEY
+        generateValue: true
+    autoDeploy: true
