@@ -12,7 +12,7 @@ const API_ENDPOINTS = {
 // Variables globales
 let currentElection = null;
 let candidates = [];
-let selectedCandidate = null;
+let selectedCandidate = null; // Variable pour stocker l'objet candidate sélectionnée
 let userEmail = null;
 let hasVoted = false;
 let electionStatus = '';
@@ -39,9 +39,9 @@ const elements = {
     verifyBtn: document.getElementById('verifyBtn'),
     emailError: document.getElementById('emailError'),
     
-    // Section candidates
+    // Section candidates - CORRECTION ICI : renommé en selectedCandidatePanel
     candidatesGrid: document.getElementById('candidatesGrid'),
-    selectedCandidate: document.getElementById('selectedCandidate'),
+    selectedCandidatePanel: document.getElementById('selectedCandidate'), // CHANGÉ : selectedCandidate → selectedCandidatePanel
     selectedInfo: document.getElementById('selectedInfo'),
     voteBtn: document.getElementById('voteBtn'),
     loadingCandidates: document.getElementById('loadingCandidates'),
@@ -165,7 +165,7 @@ function updateSystemDisplay(data) {
         elements.timeRemaining.style.display = 'block';
     }
     
-    // Mettre à jour les statistiques - CORRECTION ICI
+    // Mettre à jour les statistiques
     if (data.statistics) {
         if (elements.votesCount && data.statistics.total_votes !== undefined) {
             elements.votesCount.textContent = data.statistics.total_votes;
@@ -298,7 +298,7 @@ async function verifyEmail() {
         
         hasVoted = data.has_voted;
         
-        if (hasVoted) {  // <-- CORRECTION ICI (avec V majuscule)
+        if (hasVoted) {
             console.log("🔍 DEBUG - Déjà voté");
             saveVoteState(email, data.vote_date);
             showAlreadyVotedSection();
@@ -538,14 +538,14 @@ function selectCandidate(candidateId) {
             </div>
         `;
         
-        // Afficher avec animation
-        elements.selectedCandidate.style.display = 'block';
-        elements.selectedCandidate.style.opacity = '0';
+        // Afficher avec animation - CORRECTION ICI : selectedCandidatePanel au lieu de selectedCandidate
+        elements.selectedCandidatePanel.style.display = 'block';
+        elements.selectedCandidatePanel.style.opacity = '0';
         
         setTimeout(() => {
-            elements.selectedCandidate.style.transition = 'all 0.3s ease';
-            elements.selectedCandidate.style.opacity = '1';
-            elements.selectedCandidate.scrollIntoView({ 
+            elements.selectedCandidatePanel.style.transition = 'all 0.3s ease';
+            elements.selectedCandidatePanel.style.opacity = '1';
+            elements.selectedCandidatePanel.scrollIntoView({ 
                 behavior: 'smooth', 
                 block: 'start',
                 inline: 'nearest'
@@ -606,7 +606,8 @@ function clearSelection() {
         card.setAttribute('aria-selected', 'false');
     });
     
-    elements.selectedCandidate.style.display = 'none';
+    // CORRECTION ICI : selectedCandidatePanel au lieu de selectedCandidate
+    elements.selectedCandidatePanel.style.display = 'none';
     
     if (elements.voteBtn) {
         elements.voteBtn.disabled = true;
