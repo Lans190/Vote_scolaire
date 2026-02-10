@@ -251,6 +251,9 @@ function clearUserSession() {
 async function verifyEmail() {
     const email = elements.emailInput.value.trim().toLowerCase();
     
+    console.log("🔍 DEBUG - Email à vérifier:", email);
+    console.log("🔍 DEBUG - URL API:", API_ENDPOINTS.verify);
+    
     // Validation basique
     if (!email) {
         showEmailError('Veuillez entrer votre email');
@@ -266,7 +269,8 @@ async function verifyEmail() {
     showLoader('Vérification en cours...');
     
     try {
-        // CORRECTION ICI : verify au lieu de verifyEmail
+        console.log("🔍 DEBUG - Envoi de la requête...");
+        
         const response = await fetch(API_ENDPOINTS.verify, {
             method: 'POST',
             headers: { 
@@ -276,38 +280,46 @@ async function verifyEmail() {
             body: JSON.stringify({ email: email })
         });
         
+        console.log("🔍 DEBUG - Statut réponse:", response.status, response.statusText);
+        
         if (!response.ok) {
+            console.error("🔍 DEBUG - Erreur HTTP:", response.status);
             throw new Error(`Erreur serveur: ${response.status}`);
         }
         
         const data = await response.json();
+        console.log("🔍 DEBUG - Données reçues:", data);
         
         if (data.error) {
+            console.error("🔍 DEBUG - Erreur API:", data.error);
             showEmailError(data.error);
             return;
         }
         
         hasVoted = data.has_voted;
         
-        if (hasVoted) {
-            // Sauvegarder l'état
+        if (hasVoted) {  // <-- CORRECTION ICI (avec V majuscule)
+            console.log("🔍 DEBUG - Déjà voté");
             saveVoteState(email, data.vote_date);
             showAlreadyVotedSection();
             showStatus('✅ Vous avez déjà voté', 'info');
         } else {
             if (data.can_vote) {
+                console.log("🔍 DEBUG - Peut voter");
                 await loadCandidates();
                 showCandidatesSection();
                 showStatus('✅ Email validé • Sélectionnez une candidate', 'success');
             } else {
+                console.log("🔍 DEBUG - Ne peut pas voter:", data.message);
                 showEmailError(data.message || 'La période de vote n\'est pas active');
                 showStatus('⏸️ Vote non disponible', 'warning');
             }
         }
         
     } catch (error) {
-        console.error('Erreur vérification:', error);
-        showEmailError('Erreur de connexion au serveur');
+        console.error('💥 Erreur complète:', error);
+        console.error('💥 Stack trace:', error.stack);
+        showEmailError('Erreur de connexion au serveur: ' + error.message);
         showStatus('❌ Erreur de vérification', 'error');
     } finally {
         hideLoader();
