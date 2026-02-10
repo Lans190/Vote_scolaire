@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administration - Vote Scolaire 2026</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --admin-primary: #4361ee;
+            --admin-secondary: #3a0ca3;
+            --admin-success: #2ecc71;
+            --admin-warning: #f39c12;
+            --admin-danger: #e74c3c;
+            --admin-dark: #2c3e50;
+            --admin-light: #f8f9fa;
+            --admin-gray: #6c757d;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .admin-container {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        
+        .admin-header {
+            background: linear-gradient(135deg, var(--admin-dark), #1a2530);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-left: 5px solid var(--admin-primary);
+        }
+        
+        .admin-header h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .admin-header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .admin-warning {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            border-left: 5px solid var(--admin-warning);
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .admin-warning i {
+            font-size: 1.5rem;
+            color: var(--admin-warning);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            border-top: 5px solid var(--admin-primary);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, var(--admin-primary), var(--admin-secondary));
+        }
+        
+        .stat-card h3 {
+            font-size: 3rem;
+            color: var(--admin-primary);
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .stat-card p {
+            color: var(--admin-gray);
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        
+        .stat-card .stat-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            color: var(--admin-primary);
+            opacity: 0.8;
+        }
+        
+        .results-section {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            margin-bottom: 40px;
+        }
+        
+        .section-header {
+            background: linear-gradient(135deg, var(--admin-primary), var(--admin-secondary));
+            color: white;
+            padding: 20px 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .results-table thead {
+            background: #f8f9fa;
+        }
+        
+        .results-table th {
+            padding: 18px 20px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--admin-dark);
+            border-bottom: 2px solid #dee2e6;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .results-table td {
+            padding: 18px 20px;
+            border-bottom: 1px solid #eee;
+            color: #333;
+        }
+        
+        .results-table tbody tr {
+            transition: background-color 0.2s ease;
+        }
+        
+        .results-table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .results-table tbody tr:nth-child(even) {
+            background-color: #fcfcfc;
+        }
+        
+        .winner-badge {
+            background: linear-gradient(135deg, var(--admin-success), #27ae60);
+            color: white;
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .rank-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            background: var(--admin-primary);
+            color: white;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .rank-1 { background: linear-gradient(135deg, #ffd700, #ffa500); }
+        .rank-2 { background: linear-gradient(135deg, #c0c0c0, #a0a0a0); }
+        .rank-3 { background: linear-gradient(135deg, #cd7f32, #a0522d); }
+        
+        .percentage-bar-container {
+            width: 100px;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+        
+        .percentage-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--admin-primary), var(--admin-secondary));
+            border-radius: 4px;
+            transition: width 1s ease;
+        }
+        
+        .export-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .export-btn {
+            background: linear-gradient(135deg, var(--admin-primary), var(--admin-secondary));
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+        }
+        
+        .export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+        }
+        
+        .export-btn.secondary {
+            background: linear-gradient(135deg, var(--admin-gray), #495057);
+        }
+        
+        .export-btn.danger {
+            background: linear-gradient(135deg, var(--admin-danger), #c0392b);
+        }
+        
+        .export-btn.success {
+            background: linear-gradient(135deg, var(--admin-success), #27ae60);
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 50px;
+            font-size: 1.2rem;
+            color: var(--admin-gray);
+        }
+        
+        .loading i {
+            margin-right: 10px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: var(--admin-gray);
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+        
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--admin-primary);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .refresh-btn:hover {
+            transform: rotate(180deg);
+            background: var(--admin-secondary);
+        }
+        
+        .time-info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            font-size: 0.9rem;
+            color: var(--admin-dark);
+            z-index: 1000;
+        }
+        
+        @media (max-width: 768px) {
+            .admin-container {
+                padding: 15px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+            }
+            
+            .stat-card h3 {
+                font-size: 2.5rem;
+            }
+            
+            .export-buttons {
+                justify-content: center;
+            }
+            
+            .export-btn {
+                flex: 1;
+                min-width: 150px;
+                justify-content: center;
+            }
+            
+            .results-table {
+                display: block;
+                overflow-x: auto;
+            }
+            
+            .refresh-btn {
+                bottom: 20px;
+                right: 20px;
+                width: 45px;
+                height: 45px;
+            }
+            
+            .time-info {
+                position: static;
+                margin-bottom: 20px;
+            }
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: var(--admin-dark);
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+        
+        .candidate-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--admin-primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .candidate-info {
+            display: flex;
+            align-items: center;
+        }
+        
+        .no-votes {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--admin-gray);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="time-info" id="timeInfo">
+        <i class="fas fa-clock"></i> Chargement...
+    </div>
+    
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1><i class="fas fa-lock"></i> Administration - Vote Scolaire 2026</h1>
+            <p><i class="fas fa-school"></i> Cours privés "Source de la Fontaine" • Accès restreint à l'administration</p>
+            <p style="margin-top: 10px; font-size: 0.9rem; opacity: 0.7;">
+                <i class="fas fa-info-circle"></i> Données en temps réel • Dernière actualisation : <span id="lastUpdate">--:--:--</span>
+            </p>
+        </div>
+        
+        <div class="admin-warning">
+            <i class="fas fa-shield-alt"></i>
+            <div>
+                <strong>Accès sécurisé :</strong> Cette interface est réservée à l'administration scolaire. 
+                Toute action est tracée et enregistrée.
+            </div>
+        </div>
+        
+        <!-- Statistiques en temps réel -->
+        <h2 style="color: white; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-chart-line"></i> Tableau de bord
+        </h2>
+        
+        <div class="stats-grid" id="statsGrid">
+            <div class="loading">
+                <i class="fas fa-spinner"></i> Chargement des statistiques...
+            </div>
+        </div>
+        
+        <!-- Résultats détaillés -->
+        <div class="results-section">
+            <div class="section-header">
+                <i class="fas fa-chart-bar"></i> Résultats détaillés par candidate
+            </div>
+            <div class="table-container">
+                <table class="results-table" id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>Rang</th>
+                            <th>Candidate</th>
+                            <th>Classe</th>
+                            <th>Votes</th>
+                            <th>Pourcentage</th>
+                            <th>Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                        <tr>
+                            <td colspan="6" class="loading">
+                                <i class="fas fa-spinner"></i> Chargement des résultats...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Liste des votants -->
+        <div class="results-section">
+            <div class="section-header">
+                <i class="fas fa-users"></i> Liste des votants
+            </div>
+            <div class="table-container">
+                <table class="results-table" id="votersTable">
+                    <thead>
+                        <tr>
+                            <th>Professeur</th>
+                            <th>Date et heure</th>
+                            <th>Candidate</th>
+                            <th>Classe</th>
+                        </tr>
+                    </thead>
+                    <tbody id="votersBody">
+                        <tr>
+                            <td colspan="4" class="loading">
+                                <i class="fas fa-spinner"></i> Chargement des votants...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Actions d'administration -->
+        <div class="results-section">
+            <div class="section-header">
+                <i class="fas fa-cogs"></i> Actions d'administration
+            </div>
+            <div style="padding: 25px;">
+                <p style="margin-bottom: 20px; color: var(--admin-gray);">
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    Ces actions sont irréversibles. Utilisez-les avec prudence.
+                </p>
+                
+                <div class="export-buttons">
+                    <button class="export-btn" onclick="exportToExcel()">
+                        <i class="fas fa-file-excel"></i> Exporter Excel
+                    </button>
+                    <button class="export-btn secondary" onclick="printResults()">
+                        <i class="fas fa-print"></i> Imprimer le rapport
+                    </button>
+                    <button class="export-btn success" onclick="refreshData()">
+                        <i class="fas fa-sync-alt"></i> Actualiser
+                    </button>
+                    <button class="export-btn" onclick="showResetModal()">
+                        <i class="fas fa-trash-alt"></i> Réinitialiser les votes
+                    </button>
+                    <button class="export-btn secondary" onclick="goBack()">
+                        <i class="fas fa-arrow-left"></i> Retour au vote
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bouton de rafraîchissement flottant -->
+    <div class="refresh-btn" onclick="refreshData()" title="Actualiser les données">
+        <i class="fas fa-sync-alt"></i>
+    </div>
+    
+    <!-- Modal de réinitialisation -->
+    <div class="modal" id="resetModal">
+        <div class="modal-content">
+            <div class="modal-title">
+                <i class="fas fa-exclamation-triangle text-danger"></i> Confirmer la réinitialisation
+            </div>
+            <p>
+                <strong>Attention :</strong> Cette action va supprimer tous les votes enregistrés et réinitialiser 
+                les compteurs à zéro. Cette opération est irréversible.
+            </p>
+            <p>
+                Votes actuels : <span id="currentVotesCount">0</span>
+            </p>
+            <div class="modal-buttons">
+                <button class="export-btn secondary" onclick="hideResetModal()">
+                    <i class="fas fa-times"></i> Annuler
+                </button>
+                <button class="export-btn danger" onclick="resetVotes()">
+                    <i class="fas fa-trash-alt"></i> Confirmer la réinitialisation
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal d'export -->
+    <div class="modal" id="exportModal">
+        <div class="modal-content">
+            <div class="modal-title">
+                <i class="fas fa-file-export"></i> Exporter les données
+            </div>
+            <p>Sélectionnez le format d'export :</p>
+            <div class="export-buttons" style="margin-top: 20px;">
+                <button class="export-btn" onclick="exportToCSV()">
+                    <i class="fas fa-file-csv"></i> CSV
+                </button>
+                <button class="export-btn" onclick="exportToJSON()">
+                    <i class="fas fa-file-code"></i> JSON
+                </button>
+                <button class="export-btn secondary" onclick="hideExportModal()">
+                    <i class="fas fa-times"></i> Annuler
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ADMIN_SECRET = 'admin2026';
+        const API_BASE = window.location.origin;
+        let lastRefreshTime = null;
+        let autoRefreshInterval = null;
+        
+        // Configuration
+        const CONFIG = {
+            autoRefresh: true,
+            refreshInterval: 30000, // 30 secondes
+            showAnimations: true
+        };
+        
+        async function loadAdminData() {
+            try {
+                updateTimeInfo('Chargement...');
+                
+                // Charger les statistiques et résultats en parallèle
+                const [resultsResponse, statsResponse] = await Promise.allSettled([
+                    fetch(`${API_BASE}/api/results?admin_secret=${ADMIN_SECRET}`),
+                    fetch(`${API_BASE}/api/stats?admin_secret=${ADMIN_SECRET}`)
+                ]);
+                
+                let resultsData = null;
+                let statsData = null;
+                let hasError = false;
+                
+                // Traiter les résultats
+                if (resultsResponse.status === 'fulfilled' && resultsResponse.value.ok) {
+                    resultsData = await resultsResponse.value.json();
+                } else {
+                    console.error('Erreur résultats:', resultsResponse);
+                    hasError = true;
+                }
+                
+                // Traiter les statistiques
+                if (statsResponse.status === 'fulfilled' && statsResponse.value.ok) {
+                    statsData = await statsResponse.value.json();
+                } else {
+                    console.error('Erreur statistiques:', statsResponse);
+                    hasError = true;
+                }
+                
+                if (hasError) {
+                    throw new Error('Erreur de chargement des données');
+                }
+                
+                // Afficher les données
+                displayStats(statsData);
+                displayResults(resultsData);
+                displayVoters(statsData);
+                
+                // Mettre à jour le temps
+                lastRefreshTime = new Date();
+                updateTimeInfo('Données actualisées');
+                updateLastUpdateTime();
+                
+                // Démarrer le rafraîchissement automatique
+                if (CONFIG.autoRefresh && !autoRefreshInterval) {
+                    startAutoRefresh();
+                }
+                
+            } catch (error) {
+                console.error('Erreur chargement admin:', error);
+                showError('Erreur de chargement', 'Impossible de charger les données d\'administration');
+                
+                // Réessayer après 5 secondes
+                setTimeout(loadAdminData, 5000);
+            }
+        }
+        
+        function displayStats(data) {
+            const statsGrid = document.getElementById('statsGrid');
+            if (!statsGrid) return;
+            
+            const totalVotes = data.statistics?.total_votes || 0;
+            const totalCandidates = data.statistics?.total_candidates || 0;
+            const participationRate = data.statistics?.participation_rate || 0;
+            const remainingVotes = data.statistics?.remaining_votes || 0;
+            const votesLast24h = data.statistics?.votes_last_24h || 0;
+            const totalProfessors = data.statistics?.total_professeurs || 50;
+            
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-vote-yea"></i>
+                    </div>
+                    <h3>${totalVotes}</h3>
+                    <p>Votes enregistrés</p>
+                    <small>Sur ${totalProfessors} professeurs</small>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <h3>${totalCandidates}</h3>
+                    <p>Candidates</p>
+                    <small>${data.election?.candidates_count || 0} candidates au total</small>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <h3>${participationRate.toFixed(1)}%</h3>
+                    <p>Taux de participation</p>
+                    <small>${remainingVotes} votes restants</small>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-history"></i>
+                    </div>
+                    <h3>${votesLast24h}</h3>
+                    <p>Votes (24h)</p>
+                    <small>Activité récente</small>
+                </div>
+            `;
+            
+            // Mettre à jour le compteur dans la modal
+            document.getElementById('currentVotesCount').textContent = totalVotes;
+        }
+        
+        function displayResults(data) {
+            const resultsBody = document.getElementById('resultsBody');
+            if (!resultsBody || !data.results) return;
+            
+            if (data.results.length === 0) {
+                resultsBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="no-votes">
+                            <i class="fas fa-inbox"></i> Aucun vote enregistré pour le moment
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            let html = '';
+            let maxVotes = 0;
+            
+            // Trouver le maximum de votes pour les pourcentages
+            if (data.results.length > 0) {
+                maxVotes = Math.max(...data.results.map(r => r.votes));
+            }
+            
+            data.results.forEach((result, index) => {
+                const isWinner = index === 0 && result.votes > 0;
+                const percentage = result.percentage || 0;
+                const percentageOfMax = maxVotes > 0 ? (result.votes / maxVotes * 100) : 0;
+                const initials = result.candidate?.prenom?.charAt(0) + result.candidate?.nom?.charAt(0) || '??';
+                
+                html += `
+                    <tr>
+                        <td>
+                            <div class="rank-badge rank-${index + 1}">${index + 1}</div>
+                        </td>
+                        <td>
+                            <div class="candidate-info">
+                                <div class="candidate-avatar">${initials}</div>
+                                <div>
+                                    <strong>${result.candidate?.nom_complet || 'N/A'}</strong><br>
+                                    <small style="color: var(--admin-gray);">${result.candidate?.prenom || ''} ${result.candidate?.nom || ''}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>${result.candidate?.classe || 'N/A'}</td>
+                        <td><strong>${result.votes}</strong></td>
+                        <td>
+                            ${percentage.toFixed(1)}%
+                            <div class="percentage-bar-container">
+                                <div class="percentage-bar" style="width: ${percentageOfMax}%"></div>
+                            </div>
+                        </td>
+                        <td>
+                            ${isWinner ? '<span class="winner-badge"><i class="fas fa-crown"></i> Gagnante</span>' : ''}
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            resultsBody.innerHTML = html;
+            
+            // Animer les barres de pourcentage
+            if (CONFIG.showAnimations) {
+                setTimeout(() => {
+                    document.querySelectorAll('.percentage-bar').forEach(bar => {
+                        bar.style.transition = 'width 1.5s ease';
+                    });
+                }, 100);
+            }
+        }
+        
+        function displayVoters(data) {
+            const votersBody = document.getElementById('votersBody');
+            if (!votersBody) return;
+            
+            const voters = data.votants || [];
+            const recentVotes = data.recent_votes || [];
+            
+            if (voters.length === 0 && recentVotes.length === 0) {
+                votersBody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="no-votes">
+                            <i class="fas fa-user-slash"></i> Aucun vote enregistré pour le moment
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            let html = '';
+            const displayVotes = recentVotes.length > 0 ? recentVotes : voters.slice(0, 20);
+            
+            displayVotes.forEach(voter => {
+                const voteDate = voter.date_vote ? new Date(voter.date_vote) : new Date();
+                const formattedDate = voteDate.toLocaleString('fr-FR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                const email = voter.email || 'N/A';
+                const candidateName = voter.candidate_nom || `Candidate #${voter.candidate_id || '?'}`;
+                const candidateClass = voter.candidate_classe || 'N/A';
+                
+                // Extraire le nom du professeur de l'email
+                const professorName = email.split('@')[0] || 'Professeur';
+                const displayName = professorName.charAt(0).toUpperCase() + professorName.slice(1);
+                
+                html += `
+                    <tr>
+                        <td>
+                            <div class="candidate-info">
+                                <div class="candidate-avatar" style="background: var(--admin-gray);">
+                                    ${displayName.charAt(0)}
+                                </div>
+                                <div>
+                                    ${displayName}<br>
+                                    <small style="color: var(--admin-gray); font-size: 0.85rem;">${email}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            ${formattedDate}<br>
+                            <small style="color: var(--admin-gray); font-size: 0.85rem;">il y a ${timeAgo(voteDate)}</small>
+                        </td>
+                        <td>${candidateName}</td>
+                        <td>${candidateClass}</td>
+                    </tr>
+                `;
+            });
+            
+            votersBody.innerHTML = html;
+            
+            // Afficher un message si on ne montre pas tous les votants
+            if (voters.length > displayVotes.length) {
+                const infoRow = document.createElement('tr');
+                infoRow.innerHTML = `
+                    <td colspan="4" style="text-align: center; padding: 15px; color: var(--admin-gray); font-style: italic;">
+                        <i class="fas fa-info-circle"></i> Affichage des ${displayVotes.length} derniers votes sur ${voters.length} au total
+                    </td>
+                `;
+                votersBody.appendChild(infoRow);
+            }
+        }
+        
+        function exportToExcel() {
+            showExportModal();
+        }
+        
+        function exportToCSV() {
+            hideExportModal();
+            alert('Export CSV - Fonctionnalité à implémenter');
+        }
+        
+        function exportToJSON() {
+            hideExportModal();
+            alert('Export JSON - Fonctionnalité à implémenter');
+        }
+        
+        function exportToPDF() {
+            window.print();
+        }
+        
+        function printResults() {
+            const originalTitle = document.title;
+            document.title = `Rapport Vote Scolaire 2026 - ${new Date().toLocaleDateString('fr-FR')}`;
+            window.print();
+            document.title = originalTitle;
+        }
+        
+        function refreshData() {
+            if (CONFIG.showAnimations) {
+                document.querySelectorAll('.stat-card').forEach(card => {
+                    card.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        card.style.transform = '';
+                    }, 300);
+                });
+            }
+            
+            loadAdminData();
+        }
+        
+        function showResetModal() {
+            document.getElementById('resetModal').style.display = 'flex';
+        }
+        
+        function hideResetModal() {
+            document.getElementById('resetModal').style.display = 'none';
+        }
+        
+        function showExportModal() {
+            document.getElementById('exportModal').style.display = 'flex';
+        }
+        
+        function hideExportModal() {
+            document.getElementById('exportModal').style.display = 'none';
+        }
+        
+        async function resetVotes() {
+            if (!confirm('Êtes-vous ABSOLUMENT SÛR de vouloir réinitialiser tous les votes ? Cette action est irréversible.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/reset-votes?admin_secret=${ADMIN_SECRET}`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`✅ ${data.message || 'Votes réinitialisés avec succès'}`);
+                    hideResetModal();
+                    refreshData();
+                } else {
+                    throw new Error(data.error || 'Erreur lors de la réinitialisation');
+                }
+            } catch (error) {
+                alert(`❌ Erreur: ${error.message}`);
+            }
+        }
+        
+        function goBack() {
+            window.location.href = '/';
+        }
+        
+        function updateTimeInfo(status) {
+            const timeInfo = document.getElementById('timeInfo');
+            if (timeInfo) {
+                const now = new Date();
+                timeInfo.innerHTML = `
+                    <i class="fas fa-clock"></i> ${now.toLocaleTimeString('fr-FR')} • ${status}
+                `;
+            }
+        }
+        
+        function updateLastUpdateTime() {
+            const lastUpdate = document.getElementById('lastUpdate');
+            if (lastUpdate && lastRefreshTime) {
+                lastUpdate.textContent = lastRefreshTime.toLocaleTimeString('fr-FR');
+            }
+        }
+        
+        function timeAgo(date) {
+            const now = new Date();
+            const seconds = Math.floor((now - date) / 1000);
+            
+            if (seconds < 60) return `${seconds} seconde${seconds > 1 ? 's' : ''}`;
+            
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''}`;
+            
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours} heure${hours > 1 ? 's' : ''}`;
+            
+            const days = Math.floor(hours / 24);
+            return `${days} jour${days > 1 ? 's' : ''}`;
+        }
+        
+        function startAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+            
+            autoRefreshInterval = setInterval(() => {
+                if (!document.hidden) {
+                    refreshData();
+                }
+            }, CONFIG.refreshInterval);
+        }
+        
+        function showError(title, message) {
+            const statsGrid = document.getElementById('statsGrid');
+            if (statsGrid) {
+                statsGrid.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; background: white; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: var(--admin-danger); margin-bottom: 20px;"></i>
+                        <h3 style="color: var(--admin-danger); margin-bottom: 10px;">${title}</h3>
+                        <p style="color: var(--admin-gray);">${message}</p>
+                        <button class="export-btn" onclick="refreshData()" style="margin-top: 20px;">
+                            <i class="fas fa-redo"></i> Réessayer
+                        </button>
+                    </div>
+                `;
+            }
+            
+            updateTimeInfo('Erreur de connexion');
+        }
+        
+        // Gestion des événements
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAdminData();
+            
+            // Gestion de la visibilité de la page
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden && lastRefreshTime) {
+                    const timeSinceLastRefresh = new Date() - lastRefreshTime;
+                    if (timeSinceLastRefresh > CONFIG.refreshInterval) {
+                        refreshData();
+                    }
+                }
+            });
+            
+            // Raccourci clavier
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && e.key === 'r') {
+                    e.preventDefault();
+                    refreshData();
+                }
+                if (e.key === 'Escape') {
+                    hideResetModal();
+                    hideExportModal();
+                }
+            });
+        });
+        
+        // Exposer les fonctions globales
+        window.refreshData = refreshData;
+        window.showResetModal = showResetModal;
+        window.hideResetModal = hideResetModal;
+        window.resetVotes = resetVotes;
+        window.exportToExcel = exportToExcel;
+        window.exportToPDF = exportToPDF;
+        window.printResults = printResults;
+        window.goBack = goBack;
+        window.showExportModal = showExportModal;
+        window.hideExportModal = hideExportModal;
+        window.exportToCSV = exportToCSV;
+        window.exportToJSON = exportToJSON;
+    </script>
+</body>
+</html>
