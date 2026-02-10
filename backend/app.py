@@ -69,14 +69,13 @@ class Election(db.Model):
             return None
         
         now = datetime.now(timezone.utc)
-        fin = self.date_fin.astimezone(timezone.utc) if self.date_fin.tzinfo else self.date_fin.replace(tzinfo=timezone.utc)
+        fin = ensure_timezone(self.date_fin)
         
         if now < fin:
             diff = fin - now
             jours = diff.days
             heures = diff.seconds // 3600
             minutes = (diff.seconds % 3600) // 60
-            secondes = diff.seconds % 60
             return f"{jours}j {heures:02d}h {minutes:02d}m"
         else:
             return "Terminé"
@@ -138,7 +137,19 @@ class Vote(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 
-# ==================== FONCTIONS ADMIN ====================
+# ==================== FONCTIONS UTILITAIRES ====================
+
+def ensure_timezone(dt):
+    """Assure qu'une datetime a un timezone UTC"""
+    if dt is None:
+        return None
+    
+    if dt.tzinfo is not None:
+        # Déjà avec timezone, convertir en UTC
+        return dt.astimezone(timezone.utc)
+    else:
+        # Sans timezone, ajouter UTC
+        return dt.replace(tzinfo=timezone.utc)
 
 def check_admin_access():
     """Vérifie si la requête provient de l'admin"""
@@ -210,14 +221,6 @@ def serve_frontend(path):
         return jsonify({'error': 'Frontend non disponible'}), 404
 
 # ==================== INITIALISATION BASE DE DONNÉES ====================
-
-def ensure_timezone(dt):
-    """Assure qu'une datetime a un timezone UTC"""
-    if dt is None:
-        return None
-    if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
 
 def init_database():
     """Initialise la base de données SQLite"""
@@ -488,7 +491,7 @@ def submit_vote():
             'success': True,
             'message': 'Votre vote a été enregistré avec succès',
             'confirmation_id': f"VOTE-{vote.id:06d}",
-            'timestamp': vote.date_vote.isoformat(),
+            'timestamp': vote.date_vote.isoformat() if vote.date_vote else now.isoformat(),
             'year': 2026,
             'ecole': 'Cours privés Source de la Fontaine'
         })
@@ -546,7 +549,7 @@ def get_results():
 
 @app.route('/api/stats', methods=['GET'])
 def get_statistics():
-    """Statistiques détaillées - ADMIN SEULEMENT"""
+    """Statistiques détaillées - ADMIN SEULEMENT - VERSION CORRIGÉE"""
     if not check_admin_access():
         return jsonify({
             'error': 'Accès refusé',
@@ -559,17 +562,30 @@ def get_statistics():
         if not election:
             return jsonify({'error': 'Aucune élection active'}), 404
         
+        # Calculer les statistiques de base
         total_votes = Vote.query.filter_by(election_id=election.id).count()
         total_candidates = Candidate.query.filter_by(election_id=election.id).count()
         total_professeurs = 50
         
         now_utc = datetime.now(timezone.utc)
         
-        # Temps restant
+        # Vérifier les dates avec timezone
+        debut = ensure_timezone(election.date_debut)
         fin = ensure_timezone(election.date_fin)
-        temps_restant = fin - now_utc if fin and fin > now_utc else timedelta(0)
         
-        # Votes par classe
+        # Temps restant
+        temps_restant = timedelta(0)
+        if fin and now_utc < fin:
+            temps_restant = fin - now_utc
+        
+        # Votes des dernières 24 heures
+        yesterday_utc = now_utc - timedelta(hours=24)
+        last_24h = Vote.query.filter(
+            Vote.election_id == election.id,
+            Vote.created_at >= yesterday_utc
+        ).count()
+        
+        # Votes par candidate
         candidates = Candidate.query.filter_by(election_id=election.id).all()
         votes_by_candidate = []
         for c in candidates:
@@ -580,47 +596,72 @@ def get_statistics():
                 'votes': c.votes_count
             })
         
-        # Derniers votes (max 10)
-        recent_votes = Vote.query.filter_by(election_id=election.id)\
-            .order_by(Vote.date_vote.desc())\
-            .limit(10)\
+        # Liste des votants (limité à 50)
+        votes = Vote.query.filter_by(election_id=election.id)\
+            .order_by(Vote.created_at.desc())\
+            .limit(50)\
             .all()
         
         votants = []
-        for v in recent_votes:
+        for v in votes:
             candidate = Candidate.query.get(v.candidate_id)
             votants.append({
                 'email': v.professeur_email,
-                'date_vote': v.date_vote.isoformat() if v.date_vote else None,
-                'candidate': candidate.nom_complet if candidate else f"Candidate #{v.candidate_id}",
-                'candidate_classe': candidate.classe if candidate else None
+                'date_vote': v.created_at.isoformat() if v.created_at else None,
+                'candidate_id': v.candidate_id,
+                'candidate_nom': f"{candidate.prenom} {candidate.nom}" if candidate else "N/A",
+                'candidate_classe': candidate.classe if candidate else "N/A"
             })
         
+        # Calculs
+        participation_rate = round((total_votes / total_professeurs * 100), 2) if total_professeurs > 0 else 0
+        
         return jsonify({
-            'election': election.to_dict(),
+            'election': {
+                'id': election.id,
+                'titre': election.titre,
+                'date_debut': election.date_debut.isoformat() if election.date_debut else None,
+                'date_fin': election.date_fin.isoformat() if election.date_fin else None,
+                'statut': election.statut,
+                'temps_restant': election.get_temps_restant() if hasattr(election, 'get_temps_restant') else None
+            },
             'statistics': {
                 'total_votes': total_votes,
                 'total_candidates': total_candidates,
                 'total_professeurs': total_professeurs,
-                'participation_rate': round((total_votes / total_professeurs * 100), 2) if total_professeurs > 0 else 0,
+                'votes_last_24h': last_24h,
+                'participation_rate': participation_rate,
                 'remaining_votes': max(0, total_professeurs - total_votes),
                 'temps_restant_jours': temps_restant.days,
-                'temps_restant_heures': int(temps_restant.seconds // 3600),
-                'temps_restant_minutes': int((temps_restant.seconds % 3600) // 60),
+                'temps_restant_heures': int(temps_restant.seconds // 3600) if temps_restant else 0,
+                'temps_restant_minutes': int((temps_restant.seconds % 3600) // 60) if temps_restant else 0,
                 'votes_by_candidate': votes_by_candidate
             },
-            'recent_votes': votants,
+            'votants': votants,
+            'recent_votes': votants[:10],
             'total_votants': total_votes,
             'periode_vote': {
                 'date_debut': election.date_debut.isoformat() if election.date_debut else None,
                 'date_fin': election.date_fin.isoformat() if election.date_fin else None,
-                'vote_actif': election.date_debut and election.date_fin and (election.date_debut <= now_utc <= election.date_fin)
+                'vote_actif': election.date_debut and election.date_fin and 
+                              (ensure_timezone(election.date_debut) <= now_utc <= ensure_timezone(election.date_fin))
             },
-            'updated_at': now_utc.isoformat()
+            'updated_at': now_utc.isoformat(),
+            'year': 2026,
+            'ecole': 'Cours privés Source de la Fontaine',
+            'access': 'admin'
         })
+        
     except Exception as e:
         print(f"❌ Erreur statistiques: {str(e)}")
-        return jsonify({'error': 'Erreur serveur'}), 500
+        import traceback
+        traceback.print_exc()
+        
+        return jsonify({
+            'error': 'Erreur serveur',
+            'message': str(e),
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }), 500
 
 @app.route('/api/verify-email', methods=['POST'])
 def verify_email():

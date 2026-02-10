@@ -26,8 +26,6 @@ const elements = {
     statusMessage: document.getElementById('statusMessage'),
     timeRemaining: document.getElementById('timeRemaining'),
     votesCount: document.getElementById('votesCount'),
-    participationRate: document.getElementById('participationRate'),
-    remainingVotes: document.getElementById('remainingVotes'),
     
     // Sections principales
     emailSection: document.getElementById('emailSection'),
@@ -54,7 +52,8 @@ const elements = {
     // Sections déjà voté / confirmation
     voteTimestamp: document.getElementById('voteTimestamp'),
     confirmationId: document.getElementById('confirmationId'),
-    voteConfirmationId: document.getElementById('voteConfirmationId'),
+    confirmationEmail: document.getElementById('confirmationEmail'),
+    confirmationTime: document.getElementById('confirmationTime'),
     
     // Modals
     confirmationModal: document.getElementById('confirmationModal'),
@@ -171,14 +170,6 @@ function updateSystemDisplay(data) {
         if (elements.votesCount && data.statistics.votes !== undefined) {
             elements.votesCount.textContent = data.statistics.votes;
         }
-        
-        if (elements.participationRate && data.statistics.participation_rate !== undefined) {
-            elements.participationRate.textContent = `${data.statistics.participation_rate}%`;
-        }
-        
-        if (elements.remainingVotes && data.statistics.remaining_votes !== undefined) {
-            elements.remainingVotes.textContent = data.statistics.remaining_votes;
-        }
     }
     
     // Mettre à jour le message de statut
@@ -268,12 +259,6 @@ async function verifyEmail() {
     
     if (!validateEmail(email)) {
         showEmailError('Format d\'email invalide (exemple: nom@ecole.fr)');
-        return;
-    }
-    
-    // Vérifier le domaine si nécessaire
-    if (!email.includes('@')) {
-        showEmailError('Email invalide');
         return;
     }
     
@@ -407,8 +392,12 @@ function displayCandidates(candidatesList) {
     
     elements.candidatesGrid.innerHTML = '';
     
+    if (elements.loadingCandidates) {
+        elements.loadingCandidates.style.display = 'none';
+    }
+    
     // Trier par classe (ordre logique)
-    const classOrder = ['2nde', '3ème', '4ème', '5ème', '6ème', 'all'];
+    const classOrder = ['2nde', '3ème', '4ème', '5ème', '6ème'];
     candidatesList.sort((a, b) => {
         return classOrder.indexOf(a.classe) - classOrder.indexOf(b.classe);
     });
@@ -417,16 +406,6 @@ function displayCandidates(candidatesList) {
         const card = createCandidateCard(candidate);
         elements.candidatesGrid.appendChild(card);
     });
-    
-    // Mettre à jour les compteurs
-    if (elements.filterButtons) {
-        const allBtn = Array.from(elements.filterButtons).find(btn => 
-            btn.textContent.includes('Toutes')
-        );
-        if (allBtn) {
-            allBtn.innerHTML = `<i class="fas fa-users"></i> Toutes (${candidatesList.length})`;
-        }
-    }
 }
 
 function createCandidateCard(candidate) {
@@ -435,11 +414,12 @@ function createCandidateCard(candidate) {
     card.dataset.id = candidate.id;
     card.dataset.classe = candidate.classe;
     card.setAttribute('aria-label', `Candidate: ${candidate.prenom} ${candidate.nom}, Classe: ${candidate.classe}`);
+    card.setAttribute('tabindex', '0');
     
     // Initiales pour l'avatar
     const initials = getInitials(candidate.prenom, candidate.nom);
     
-    // Couleur basée sur la classe pour une meilleure cohérence
+    // Couleur basée sur la classe
     const color = getColorByClass(candidate.classe);
     
     card.innerHTML = `
@@ -468,6 +448,14 @@ function createCandidateCard(candidate) {
     // Interaction tactile/click
     card.addEventListener('click', (e) => {
         if (!e.target.closest('.select-btn')) {
+            selectCandidate(candidate.id);
+        }
+    });
+    
+    // Support clavier
+    card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
             selectCandidate(candidate.id);
         }
     });
@@ -717,13 +705,17 @@ async function submitVote() {
         saveVoteState(userEmail, data.timestamp);
         localStorage.setItem('vote_candidate_id_2026', selectedCandidateId.toString());
         
-        // Afficher l'ID de confirmation du serveur
+        // Afficher l'ID de confirmation
         if (elements.confirmationId) {
             elements.confirmationId.textContent = data.confirmation_id || `VOTE-${Date.now()}`;
         }
         
-        if (elements.voteConfirmationId) {
-            elements.voteConfirmationId.textContent = data.confirmation_id || `VOTE-${Date.now()}`;
+        if (elements.confirmationEmail) {
+            elements.confirmationEmail.textContent = userEmail;
+        }
+        
+        if (elements.confirmationTime) {
+            elements.confirmationTime.textContent = formatDateTime(new Date());
         }
         
         showConfirmationSection();
@@ -1057,8 +1049,7 @@ function formatDateTime(date) {
         month: '2-digit',
         year: 'numeric',
         hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
+        minute: '2-digit'
     });
 }
 
@@ -1239,13 +1230,10 @@ function setupEventListeners() {
         showStatus('❌ Hors ligne - Reconnexion en cours...', 'error');
     });
     
-    // Visibility change (tab switching)
-    document.addEventListener('visibilitychange', () => {
-        if (!document.hidden && userEmail && !hasVoted) {
-            // Vérifier si on peut toujours voter
-            setTimeout(() => {
-                loadSystemStatus().catch(console.error);
-            }, 500);
+    // Validation email avec Entrée
+    elements.emailInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            verifyEmail();
         }
     });
 }
@@ -1273,7 +1261,12 @@ window.scrollToTop = scrollToTop;
 // Message de démarrage
 console.log('=== Système de Vote Scolaire 2026 ===');
 console.log('Établissement: Cours privés Source de la Fontaine');
-console.log('Candidates: Binta Diallo (3ème), Maguette Ngom (6ème), Eléna Nafissatou Gomis (5ème), Diasse Séne (2nde), Ndeye Fatou Ndong (4ème)');
+console.log('Candidates:');
+console.log('  • Binta Diallo (3ème)');
+console.log('  • Maguette Ngom (6ème)');
+console.log('  • Eléna Nafissatou Gomis (5ème)');
+console.log('  • Diasse Séne (2nde)');
+console.log('  • Ndeye Fatou Ndong (4ème)');
 console.log('Version: 2.0.0');
 console.log('URL:', window.location.origin);
-console.log('Timestamp:', new Date().toISOString());
+console.log('Timestamp:', new Date().toLocaleString('fr-FR'));
