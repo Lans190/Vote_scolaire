@@ -3,7 +3,7 @@ const API_BASE_URL = window.location.origin;
 const API_ENDPOINTS = {
     election: `${API_BASE_URL}/api/election`,
     vote: `${API_BASE_URL}/api/vote`,
-    verifyEmail: `${API_BASE_URL}/api/verify-email`,
+    verify: `${API_BASE_URL}/api/verify-email`,
     status: `${API_BASE_URL}/api/status`,
     results: `${API_BASE_URL}/api/results`,
     stats: `${API_BASE_URL}/api/stats`
@@ -165,10 +165,10 @@ function updateSystemDisplay(data) {
         elements.timeRemaining.style.display = 'block';
     }
     
-    // Mettre à jour les statistiques
+    // Mettre à jour les statistiques - CORRECTION ICI
     if (data.statistics) {
-        if (elements.votesCount && data.statistics.votes !== undefined) {
-            elements.votesCount.textContent = data.statistics.votes;
+        if (elements.votesCount && data.statistics.total_votes !== undefined) {
+            elements.votesCount.textContent = data.statistics.total_votes;
         }
     }
     
@@ -266,7 +266,8 @@ async function verifyEmail() {
     showLoader('Vérification en cours...');
     
     try {
-        const response = await fetch(API_ENDPOINTS.verifyEmail, {
+        // CORRECTION ICI : verify au lieu de verifyEmail
+        const response = await fetch(API_ENDPOINTS.verify, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
@@ -893,7 +894,7 @@ async function loadSystemInfo() {
                         <i class="fas fa-vote-yea"></i>
                         <div>
                             <strong>Votes enregistrés :</strong>
-                            <span>${data.statistics?.votes || '0'}</span>
+                            <span>${data.statistics?.total_votes || '0'}</span>
                         </div>
                     </div>
                     <div class="info-item">
