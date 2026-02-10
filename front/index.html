@@ -572,7 +572,7 @@
             background: linear-gradient(90deg, transparent, var(--gray-light), transparent);
         }
 
-        .candidate-avatar {
+        .candidate-photo {
             width: 100px;
             height: 100px;
             border-radius: 50%;
@@ -592,7 +592,7 @@
             flex: 1;
         }
 
-        .candidate-name {
+        .candidate-info h3 {
             font-size: 1.6rem;
             font-weight: 900;
             color: var(--dark);
@@ -613,25 +613,23 @@
             letter-spacing: 0.5px;
         }
 
-        .candidate-content {
-            padding: 0 35px 35px;
-        }
-
         .candidate-description {
+            padding: 0 35px 35px;
             color: var(--gray);
             line-height: 1.8;
-            margin-bottom: 30px;
             font-size: 1.1rem;
         }
 
-        .candidate-actions {
-            display: flex;
-            gap: 15px;
+        .candidate-select {
+            padding: 0 35px 35px;
         }
 
-        .btn-select, .btn-details {
-            flex: 1;
+        .select-btn {
+            width: 100%;
             padding: 18px;
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
             border-radius: var(--radius-md);
             font-weight: 700;
             font-size: 1.1rem;
@@ -644,26 +642,9 @@
             letter-spacing: 0.5px;
         }
 
-        .btn-select {
-            background: var(--gradient-primary);
-            color: white;
-            border: none;
-        }
-
-        .btn-select:hover {
+        .select-btn:hover {
             transform: translateY(-3px);
             box-shadow: var(--shadow-md);
-        }
-
-        .btn-details {
-            background: white;
-            border: 2px solid var(--gray-light);
-            color: var(--dark);
-        }
-
-        .btn-details:hover {
-            border-color: var(--primary);
-            transform: translateY(-3px);
         }
 
         /* Section sélectionnée */
@@ -675,6 +656,7 @@
             padding: 40px;
             margin-top: 40px;
             animation: slideUp 0.5s ease-out;
+            display: none;
         }
 
         @keyframes slideUp {
@@ -714,24 +696,18 @@
             box-shadow: var(--shadow-sm);
         }
 
-        .selected-info p {
+        .selection-confirmation {
+            background: var(--gradient-success);
+            color: white;
+            padding: 15px;
+            border-radius: var(--radius-md);
+            text-align: center;
+            font-weight: 700;
+            margin-top: 20px;
             display: flex;
             align-items: center;
-            gap: 15px;
-            margin-bottom: 20px;
-            color: var(--dark);
-            font-size: 1.2rem;
-            font-weight: 600;
-        }
-
-        .selected-info p:last-child {
-            margin-bottom: 0;
-        }
-
-        .selected-info i {
-            color: var(--primary);
-            width: 24px;
-            font-size: 1.4rem;
+            justify-content: center;
+            gap: 10px;
         }
 
         .btn-vote, .btn-clear {
@@ -748,17 +724,27 @@
             gap: 15px;
             margin-bottom: 15px;
             letter-spacing: 0.5px;
+            border: none;
         }
 
         .btn-vote {
             background: var(--gradient-success);
             color: white;
-            border: none;
         }
 
-        .btn-vote:hover {
+        .btn-vote:hover:not(:disabled) {
             transform: translateY(-3px);
             box-shadow: var(--shadow-md);
+        }
+
+        .btn-vote:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-vote.active {
+            opacity: 1;
+            cursor: pointer;
         }
 
         .btn-clear {
@@ -894,18 +880,17 @@
             gap: 12px;
             margin: 15px;
             letter-spacing: 0.5px;
+            border: none;
         }
 
         .btn-success {
             background: var(--gradient-success);
             color: white;
-            border: none;
         }
 
         .btn-warning {
             background: var(--gradient-warning);
             color: white;
-            border: none;
         }
 
         .btn-secondary {
@@ -928,18 +913,17 @@
             height: 100%;
             background: rgba(0, 0, 0, 0.8);
             backdrop-filter: blur(15px);
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
             z-index: 10000;
             opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s, visibility 0.3s;
+            transition: opacity 0.3s;
         }
 
         .modal-overlay.active {
+            display: flex;
             opacity: 1;
-            visibility: visible;
         }
 
         .modal-container {
@@ -991,34 +975,80 @@
             margin-bottom: 25px;
         }
 
-        .confirm-candidate {
-            background: rgba(67, 97, 238, 0.1);
-            border-radius: var(--radius-md);
-            padding: 25px;
-            margin: 25px 0;
-            border: 2px solid rgba(67, 97, 238, 0.2);
+        .confirmation-header {
+            margin-bottom: 25px;
         }
 
-        .warning-box {
+        .confirmation-header h3 {
+            color: var(--dark);
+            font-size: 1.6rem;
+            margin-bottom: 10px;
+        }
+
+        .confirmation-header p {
+            color: var(--gray);
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--gray-light);
+        }
+
+        .detail-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .detail-item i {
+            color: var(--primary);
+            font-size: 1.4rem;
+            margin-top: 3px;
+            min-width: 24px;
+        }
+
+        .detail-item div {
+            flex: 1;
+        }
+
+        .detail-item strong {
+            display: block;
+            color: var(--dark);
+            margin-bottom: 5px;
+            font-size: 1rem;
+        }
+
+        .detail-item span {
+            color: var(--gray);
+            font-size: 1.1rem;
+        }
+
+        .confirmation-warning {
             background: rgba(255, 158, 0, 0.1);
             border-left: 6px solid var(--warning);
             padding: 20px;
             border-radius: var(--radius-sm);
-            margin: 25px 0;
+            margin-top: 25px;
             display: flex;
             align-items: flex-start;
             gap: 15px;
         }
 
-        .warning-box i {
+        .confirmation-warning i {
             color: var(--warning);
             font-size: 1.5rem;
             margin-top: 2px;
         }
 
-        .warning-box strong {
+        .confirmation-warning strong {
             color: var(--dark);
             font-size: 1.1rem;
+            display: block;
+            margin-bottom: 5px;
         }
 
         .modal-footer {
@@ -1041,24 +1071,22 @@
             justify-content: center;
             gap: 12px;
             letter-spacing: 0.5px;
+            border: none;
         }
 
         .modal-btn.cancel {
             background: var(--gray-light);
             color: var(--dark);
-            border: none;
         }
 
         .modal-btn.confirm {
             background: var(--gradient-success);
             color: white;
-            border: none;
         }
 
         .modal-btn.ok {
             background: var(--gradient-primary);
             color: white;
-            border: none;
             width: 100%;
             margin-top: 20px;
         }
@@ -1077,18 +1105,17 @@
             height: 100%;
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(20px);
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
             z-index: 100000;
             opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s, visibility 0.3s;
+            transition: opacity 0.3s;
         }
 
         .global-loader.active {
+            display: flex;
             opacity: 1;
-            visibility: visible;
         }
 
         .loader-content {
@@ -1189,6 +1216,8 @@
             font-size: 1rem;
             position: relative;
             overflow: hidden;
+            border: none;
+            cursor: pointer;
         }
 
         .footer-link::before {
@@ -1269,6 +1298,7 @@
             font-weight: 700;
             font-size: 1.1rem;
             letter-spacing: 0.5px;
+            display: none;
         }
 
         @keyframes slideInDown {
@@ -1330,6 +1360,21 @@
             }
         }
 
+        /* Messages d'erreur */
+        .error-message {
+            background: rgba(255, 89, 94, 0.1);
+            border-left: 4px solid var(--danger);
+            color: var(--danger);
+            padding: 15px 20px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 25px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            animation: fadeIn 0.3s ease-out;
+        }
+
         /* Responsive */
         @media (max-width: 1200px) {
             .container {
@@ -1383,7 +1428,7 @@
                 gap: 25px;
             }
             
-            .candidate-avatar {
+            .candidate-photo {
                 width: 90px;
                 height: 90px;
                 font-size: 2.5rem;
@@ -1391,11 +1436,13 @@
             
             .filters {
                 justify-content: center;
+                overflow-x: auto;
+                padding-bottom: 10px;
             }
             
             .filter-btn {
-                flex: 1;
-                min-width: 150px;
+                flex: 0 0 auto;
+                min-width: 140px;
                 justify-content: center;
                 padding: 14px 20px;
             }
@@ -1415,11 +1462,22 @@
                 width: 100%;
                 max-width: 300px;
             }
+            
+            .confirmation-details p {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+            
+            .detail-item {
+                flex-direction: column;
+                gap: 10px;
+            }
         }
 
         @media (max-width: 480px) {
             .header, .section-card {
-                padding: 25px;
+                padding: 25px 20px;
             }
             
             .logo h1 {
@@ -1443,18 +1501,22 @@
             }
             
             #emailInput, .btn-primary {
-                padding: 20px;
+                padding: 18px;
                 font-size: 1.1rem;
             }
             
+            .btn-primary {
+                padding: 18px 15px;
+            }
+            
             .candidate-card {
-                margin: 0 10px;
+                margin: 0 5px;
             }
             
             .btn-action {
-                padding: 16px 30px;
+                padding: 16px 25px;
                 font-size: 1rem;
-                margin: 10px;
+                margin: 10px 5px;
             }
             
             .message-container {
@@ -1470,13 +1532,22 @@
             .message-container h2 {
                 font-size: 2rem;
             }
+            
+            .modal-container {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .modal-header, .modal-body, .modal-footer {
+                padding: 20px;
+            }
         }
 
         /* Animations */
         @keyframes fadeIn {
             from {
                 opacity: 0;
-                transform: translateY(30px);
+                transform: translateY(10px);
             }
             to {
                 opacity: 1;
@@ -1521,11 +1592,24 @@
         .mt-4 { margin-top: 2rem; }
         .mb-4 { margin-bottom: 2rem; }
         .py-4 { padding-top: 2rem; padding-bottom: 2rem; }
+        
+        /* Loading pour candidates */
+        #loadingCandidates {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+        }
+        
+        #loadingCandidates .loader-spinner {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
     <!-- Bannière hors ligne -->
-    <div class="offline-banner hidden" id="offlineBanner">
+    <div class="offline-banner" id="offlineBanner">
         <i class="fas fa-wifi-slash"></i>
         <span>Vous êtes hors ligne. Reconnexion en cours...</span>
     </div>
@@ -1595,7 +1679,10 @@
                                required>
                     </div>
                     
-                    <div class="error-message hidden" id="emailError"></div>
+                    <div class="error-message" id="emailError">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span></span>
+                    </div>
                     
                     <button id="verifyBtn" class="btn-primary" onclick="verifyEmail()">
                         <i class="fas fa-shield-alt"></i>
@@ -1664,13 +1751,13 @@
                 </div>
 
                 <!-- Candidate sélectionnée -->
-                <div class="selection-panel hidden" id="selectedCandidate">
+                <div class="selection-panel" id="selectedCandidate">
                     <div class="selection-header">
                         <i class="fas fa-check-circle"></i>
                         <h3>Votre sélection actuelle</h3>
                     </div>
                     <div class="selected-info" id="selectedInfo"></div>
-                    <button class="btn-vote" id="voteBtn" onclick="showConfirmationModal()">
+                    <button class="btn-vote" id="voteBtn" onclick="showConfirmationModal()" disabled>
                         <i class="fas fa-vote-yea"></i>
                         <span>CONFIRMER MON VOTE</span>
                     </button>
@@ -1771,15 +1858,18 @@
         </main>
 
         <!-- Modal de confirmation -->
-        <div class="modal-overlay hidden" id="confirmationModal">
+        <div class="modal-overlay" id="confirmationModal">
             <div class="modal-container">
                 <div class="modal-header">
                     <h3><i class="fas fa-shield-alt"></i> Confirmation finale</h3>
                 </div>
                 <div class="modal-body">
-                    <p>Vous êtes sur le point de voter pour :</p>
-                    <div class="confirm-candidate" id="confirmCandidate"></div>
-                    <div class="warning-box">
+                    <div class="confirmation-header">
+                        <h3>Vous êtes sur le point de voter pour :</h3>
+                        <p>Veuillez vérifier vos informations avant de confirmer</p>
+                    </div>
+                    <div id="confirmCandidate"></div>
+                    <div class="confirmation-warning">
                         <i class="fas fa-exclamation-triangle"></i>
                         <div>
                             <strong>Action irréversible</strong>
@@ -1803,7 +1893,7 @@
         </div>
 
         <!-- Modal d'information système -->
-        <div class="modal-overlay hidden" id="systemInfoModal">
+        <div class="modal-overlay" id="systemInfoModal">
             <div class="modal-container">
                 <div class="modal-header">
                     <h3><i class="fas fa-info-circle"></i> Informations système</h3>
@@ -1821,7 +1911,7 @@
         </div>
 
         <!-- Modal accessibilité -->
-        <div class="modal-overlay hidden" id="accessibilityModal">
+        <div class="modal-overlay" id="accessibilityModal">
             <div class="modal-container">
                 <div class="modal-header">
                     <h3><i class="fas fa-universal-access"></i> Accessibilité</h3>
@@ -1853,7 +1943,7 @@
         </div>
 
         <!-- Loader global -->
-        <div class="global-loader hidden" id="globalLoader">
+        <div class="global-loader" id="globalLoader">
             <div class="loader-content">
                 <div class="loader-spinner"></div>
                 <p id="loaderMessage">Traitement en cours...</p>
@@ -1867,11 +1957,11 @@
                 <p>Système de vote électronique sécurisé - Version 3.0</p>
                 
                 <div class="footer-links">
-                    <a href="#" class="footer-link" onclick="showSystemInfo()">
+                    <a href="#" class="footer-link" onclick="showSystemInfo(); return false;">
                         <i class="fas fa-info-circle"></i>
                         <span>Informations système</span>
                     </a>
-                    <a href="#" class="footer-link" onclick="showAccessibilityInfo()">
+                    <a href="#" class="footer-link" onclick="showAccessibilityInfo(); return false;">
                         <i class="fas fa-universal-access"></i>
                         <span>Accessibilité</span>
                     </a>
@@ -1888,82 +1978,39 @@
                 
                 <div class="server-info">
                     <i class="fas fa-server"></i>
-                    Serveur : <span id="serverInfo">vote.sourcefontaine.fr</span>
+                    Serveur : <span id="serverInfo">vote-scolaire.onrender.com</span>
                 </div>
             </div>
         </footer>
     </div>
 
-    <!-- Scripts -->
+    <!-- Script JavaScript principal -->
+    <script src="script.js"></script>
+    
+    <!-- Initialisation simple -->
     <script>
-        // Fonctions JavaScript (exemple)
-        function verifyEmail() {
-            // À implémenter
-            console.log('Vérification email...');
-        }
-        
-        function filterCandidates(filter) {
-            // À implémenter
-            console.log('Filtrage:', filter);
-        }
-        
-        function showConfirmationModal() {
-            // À implémenter
-            console.log('Afficher modal confirmation');
-        }
-        
-        function clearSelection() {
-            // À implémenter
-            console.log('Effacer sélection');
-        }
-        
-        function submitVote() {
-            // À implémenter
-            console.log('Soumettre vote');
-        }
-        
-        function retryAction() {
-            // À implémenter
-            console.log('Réessayer');
-        }
-        
-        function goToEmailSection() {
-            // À implémenter
-            console.log('Retour section email');
-        }
-        
-        function logout() {
-            // À implémenter
-            console.log('Déconnexion');
-        }
-        
-        function showSystemInfo() {
-            // À implémenter
-            console.log('Infos système');
-        }
-        
-        function showAccessibilityInfo() {
-            // À implémenter
-            console.log('Accessibilité');
-        }
-        
-        function hideModal() {
-            // À implémenter
-            console.log('Cacher modal');
-        }
-        
-        function hideSystemInfoModal() {
-            // À implémenter
-            console.log('Cacher infos système');
-        }
-        
-        function hideAccessibilityModal() {
-            // À implémenter
-            console.log('Cacher accessibilité');
-        }
-        
-        // Initialisation
-        document.getElementById('footerYear').textContent = new Date().getFullYear();
+        // Initialisation de base
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mettre à jour l'année du footer
+            document.getElementById('footerYear').textContent = new Date().getFullYear();
+            
+            // Mettre à jour l'info serveur
+            document.getElementById('serverInfo').textContent = window.location.hostname;
+            
+            // Ajouter l'événement Enter pour l'email
+            const emailInput = document.getElementById('emailInput');
+            if (emailInput) {
+                emailInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        if (typeof verifyEmail === 'function') {
+                            verifyEmail();
+                        }
+                    }
+                });
+            }
+            
+            console.log('✅ Page HTML chargée avec succès !');
+        });
     </script>
 </body>
 </html>
