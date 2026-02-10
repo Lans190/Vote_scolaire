@@ -148,8 +148,8 @@ def check_admin_access():
     """Vérifie si la requête provient de l'admin - VERSION SIMPLIFIÉE"""
     admin_secret = request.args.get('admin_secret')
     
-    # Secret par défaut pour test
-    expected_secret = 'admin2026'
+    # Utiliser le même secret que le frontend
+    expected_secret = 'admin_vote_2026_source_fontaine'
     
     print(f"🔍 Vérification admin:")
     print(f"   Secret reçu: {admin_secret}")
