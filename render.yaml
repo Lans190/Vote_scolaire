@@ -1,9 +1,15 @@
 services:
   - type: web
-    name: vote-scolaire
+    name: vote-scolaire-la-source
     env: python
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: cd backend && python app.py
+    region: frankfurt
+    rootDirectory: backend  # IMPORTANT: Spécifier le dossier backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 2 --timeout 120
     envVars:
-      - key: DATABASE_URL
-        value: postgresql://vote_user:sVZxXHKa3RfuRfS2SkcSJUuIJ8C0KMpF@dpg-d64t7q24d50c73eo9nn0-a.render.com:5432/vote_vq45
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PORT
+        value: 10000
+    healthCheckPath: /api/status
+    autoDeploy: true

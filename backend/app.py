@@ -3,31 +3,47 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta, timezone
 import os
+import sys
 from dotenv import load_dotenv
 
 # Charger les variables d'environnement
 load_dotenv()
 
-# Chemins
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FRONTEND_PATH = os.path.join(BASE_DIR, '..', 'front')
+# ==================== CONFIGURATION DES CHEMINS ====================
 
+# Pour Render, on détermine les chemins corrects
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(BASE_DIR)  # Remonter d'un niveau
+FRONTEND_PATH = os.path.join(PROJECT_ROOT, 'front')
+
+print("=" * 80)
+print("🚀 SYSTÈME DE VOTE SCOLAIRE 2026 - BACKEND FLASK")
+print("=" * 80)
+print(f"📁 Dossier backend: {BASE_DIR}")
+print(f"📁 Dossier projet: {PROJECT_ROOT}")
 print(f"📁 Chemin frontend: {FRONTEND_PATH}")
-print(f"📁 Existe: {os.path.exists(FRONTEND_PATH)}")
+print(f"📁 Frontend existe: {os.path.exists(FRONTEND_PATH)}")
+
+if os.path.exists(FRONTEND_PATH):
+    print(f"📁 Fichiers frontend: {os.listdir(FRONTEND_PATH)}")
+else:
+    print("⚠️  AVERTISSEMENT: Dossier frontend non trouvé")
+    print("📁 Dossiers à la racine:", os.listdir(PROJECT_ROOT) if os.path.exists(PROJECT_ROOT) else "Projet non trouvé")
 
 app = Flask(__name__, static_folder=FRONTEND_PATH if os.path.exists(FRONTEND_PATH) else None)
-CORS(app)
+CORS(app)  # Activer CORS pour toutes les routes
 
 # ==================== CONFIGURATION BASE DE DONNÉES ====================
 
 SQLITE_DB_PATH = os.path.join(BASE_DIR, 'votes.db')
 DATABASE_URL = f"sqlite:///{SQLITE_DB_PATH}"
 
-print(f"🔗 Base de données SQLite: {SQLITE_DB_PATH}")
+print(f"🔗 Base de données: {SQLITE_DB_PATH}")
+print(f"🔗 URL Database: {DATABASE_URL}")
 
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'vote_scolaire_2026_fontaine')
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'vote_2026_la_source_fontaine_secret_secure_key_98765')
 
 db = SQLAlchemy(app)
 
@@ -169,54 +185,92 @@ def check_admin_access():
 
 @app.route('/')
 def index():
-    """Page d'accueil"""
+    """Page d'accueil - sert index.html"""
     if os.path.exists(FRONTEND_PATH):
-        return send_from_directory(FRONTEND_PATH, 'index.html')
+        try:
+            return send_from_directory(FRONTEND_PATH, 'index.html')
+        except Exception as e:
+            print(f"❌ Erreur chargement index.html: {e}")
+            return fallback_index()
     else:
-        return '''
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Système de Vote Scolaire 2026</title>
-            <style>
-                body { font-family: Arial, sans-serif; margin: 40px; text-align: center; background: #f8f9fa; }
-                .container { max-width: 800px; margin: 0 auto; }
-                .header { background: linear-gradient(135deg, #4361ee, #3a0ca3); color: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; }
-                .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin: 20px 0; }
-                .api-link { display: block; padding: 15px; background: #e9ecef; margin: 10px 0; border-radius: 5px; text-decoration: none; color: #333; }
-                .api-link:hover { background: #dee2e6; }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>🗳️ Système de Vote Scolaire 2026</h1>
-                    <h2>Cours privés "Source de la Fontaine"</h2>
-                </div>
-                
-                <div class="card">
-                    <h3>📡 API Backend Opérationnelle</h3>
-                    <p>Le serveur Flask fonctionne correctement.</p>
-                    
-                    <a href="/api/status" class="api-link">📊 /api/status - Statut du système</a>
-                    <a href="/api/election" class="api-link">🏫 /api/election - Élection active</a>
-                    <a href="/api/results?admin_secret=admin2026" class="api-link">🔐 /api/results - Résultats (Admin)</a>
-                    <a href="/api/stats?admin_secret=admin2026" class="api-link">📈 /api/stats - Statistiques (Admin)</a>
-                </div>
-                
-                <p style="margin-top: 30px; color: #666;">
-                    © 2026 - Cours privés Source de la Fontaine - Tous droits réservés
-                </p>
+        return fallback_index()
+
+def fallback_index():
+    """Page de fallback si le frontend n'est pas disponible"""
+    return '''
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Système de Vote Scolaire 2026</title>
+        <style>
+            body { font-family: 'Arial', sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; color: white; }
+            .container { max-width: 1000px; margin: 0 auto; background: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 20px; color: #333; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+            .header { text-align: center; margin-bottom: 40px; }
+            .logo { font-size: 3rem; margin-bottom: 20px; }
+            h1 { color: #4361ee; font-size: 2.5rem; margin-bottom: 10px; }
+            h2 { color: #7209b7; font-size: 1.8rem; margin-bottom: 30px; }
+            .card { background: #f8f9fa; padding: 25px; border-radius: 15px; margin: 20px 0; border-left: 6px solid #4361ee; }
+            .api-link { display: block; padding: 15px 20px; background: #e9ecef; margin: 10px 0; border-radius: 10px; text-decoration: none; color: #333; font-weight: bold; transition: all 0.3s; border: 2px solid transparent; }
+            .api-link:hover { background: #4361ee; color: white; transform: translateY(-3px); border-color: #3a0ca3; }
+            .api-link i { margin-right: 10px; }
+            .status { display: inline-block; padding: 10px 20px; background: #4cc9f0; color: white; border-radius: 20px; font-weight: bold; }
+        </style>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <div class="logo">🗳️</div>
+                <h1>Système de Vote Scolaire 2026</h1>
+                <h2>Cours privés "La Source de la Fontaine"</h2>
+                <div class="status">📡 BACKEND OPERATIONNEL</div>
             </div>
-        </body>
-        </html>
-        '''
+            
+            <div class="card">
+                <h3><i class="fas fa-rocket"></i> API Backend Prête</h3>
+                <p>Le serveur Flask fonctionne correctement. Les API suivantes sont disponibles :</p>
+                
+                <a href="/api/status" class="api-link">
+                    <i class="fas fa-chart-bar"></i> 📊 /api/status - Statut du système
+                </a>
+                <a href="/api/election" class="api-link">
+                    <i class="fas fa-school"></i> 🏫 /api/election - Élection active
+                </a>
+                <a href="/api/results?admin_secret=admin2026" class="api-link">
+                    <i class="fas fa-lock"></i> 🔐 /api/results - Résultats (Admin)
+                </a>
+                <a href="/api/stats?admin_secret=admin2026" class="api-link">
+                    <i class="fas fa-chart-line"></i> 📈 /api/stats - Statistiques (Admin)
+                </a>
+                
+                <div style="margin-top: 30px; padding: 20px; background: rgba(67, 97, 238, 0.1); border-radius: 10px;">
+                    <h4><i class="fas fa-info-circle"></i> Informations techniques</h4>
+                    <p><strong>Base de données :</strong> SQLite</p>
+                    <p><strong>Période de vote :</strong> 9-13 février 2026</p>
+                    <p><strong>Version :</strong> 2.0.0</p>
+                    <p><strong>Serveur :</strong> Flask avec SQLAlchemy</p>
+                </div>
+            </div>
+            
+            <p style="text-align: center; margin-top: 40px; color: #666; padding-top: 20px; border-top: 2px solid #eee;">
+                <i class="fas fa-copyright"></i> 2026 - Cours privés La Source de la Fontaine - Tous droits réservés
+            </p>
+        </div>
+    </body>
+    </html>
+    '''
 
 @app.route('/<path:path>')
 def serve_frontend(path):
     """Sert les fichiers statiques du frontend"""
     if os.path.exists(FRONTEND_PATH):
-        return send_from_directory(FRONTEND_PATH, path)
+        try:
+            return send_from_directory(FRONTEND_PATH, path)
+        except Exception as e:
+            print(f"❌ Erreur chargement {path}: {e}")
+            return jsonify({'error': 'Fichier non trouvé', 'path': path}), 404
     else:
         return jsonify({'error': 'Frontend non disponible'}), 404
 
@@ -251,6 +305,8 @@ def init_database():
                 db.session.commit()
                 print(f"✅ Nouvelle élection 2026 créée")
                 print(f"📅 Période de vote : {date_debut.strftime('%d/%m/%Y')} au {date_fin.strftime('%d/%m/%Y')}")
+            else:
+                print(f"✅ Élection existante chargée: {election.titre}")
             
             # Vérifier et créer les candidates
             candidates_count = Candidate.query.filter_by(election_id=election.id).count()
@@ -258,40 +314,14 @@ def init_database():
             if candidates_count == 0:
                 # Liste des candidates réelles
                 candidates_data = [
-                    {
-                        'nom': 'Diallo',
-                        'prenom': 'Binta',
-                        'classe': '3ème',
-                        'description': ''
-                    },
-                    {
-                        'nom': 'Ngom',
-                        'prenom': 'Maguette',
-                        'classe': '6ème',
-                        'description': ''
-                    },
-                    {
-                        'nom': 'Gomis',
-                        'prenom': 'Eléna Nafissatou',
-                        'classe': '5ème',
-                        'description': ''
-                    },
-                    {
-                        'nom': 'Séne',
-                        'prenom': 'Diasse',
-                        'classe': '2nde',
-                        'description': ''
-                    },
-                    {
-                        'nom': 'Ndong',
-                        'prenom': 'Ndeye Fatou',
-                        'classe': '4ème',
-                        'description': ''
-                    }
+                    {'nom': 'Diallo', 'prenom': 'Binta', 'classe': '3ème', 'description': 'Candidate sérieuse et impliquée'},
+                    {'nom': 'Ngom', 'prenom': 'Maguette', 'classe': '6ème', 'description': 'Dynamique et à l\'écoute'},
+                    {'nom': 'Gomis', 'prenom': 'Eléna Nafissatou', 'classe': '5ème', 'description': 'Responsable et organisée'},
+                    {'nom': 'Séne', 'prenom': 'Diasse', 'classe': '2nde', 'description': 'Créative et motivante'},
+                    {'nom': 'Ndong', 'prenom': 'Ndeye Fatou', 'classe': '4ème', 'description': 'Sait communiquer et représenter'}
                 ]
                 
                 for cand_data in candidates_data:
-                    # Générer une photo d'avatar colorée
                     candidate = Candidate(
                         nom=cand_data['nom'],
                         prenom=cand_data['prenom'],
@@ -304,6 +334,8 @@ def init_database():
                 
                 db.session.commit()
                 print(f"✅ {len(candidates_data)} candidates créées")
+            else:
+                print(f"✅ {candidates_count} candidates existantes chargées")
             
             total_votes = Vote.query.count()
             print(f"📊 Total votes enregistrés : {total_votes}")
@@ -347,8 +379,10 @@ def get_system_status():
                     temps_restant = f"{jours}j {heures:02d}h {minutes:02d}m"
                 elif now < debut:
                     status = "pending"
+                    temps_restant = "Pas encore commencé"
                 else:
                     status = "finished"
+                    temps_restant = "Terminé"
         
         # Nombre total de professeurs (estimation)
         total_professeurs = 50
@@ -360,12 +394,14 @@ def get_system_status():
                 'timestamp': now.isoformat(),
                 'database': 'SQLite',
                 'year': 2026,
-                'ecole': 'Cours privés Source de la Fontaine',
-                'version': '2.0.0'
+                'ecole': 'Cours privés La Source de la Fontaine',
+                'version': '2.0.0',
+                'environment': 'production' if not app.debug else 'development'
             },
             'election': {
                 'status': status,
                 'title': election.titre if election else None,
+                'description': election.description if election else None,
                 'date_debut': election.date_debut.isoformat() if election else None,
                 'date_fin': election.date_fin.isoformat() if election else None,
                 'temps_restant': temps_restant,
@@ -383,7 +419,8 @@ def get_system_status():
         print(f"❌ Erreur status: {str(e)}")
         return jsonify({
             'error': 'Erreur serveur',
-            'timestamp': datetime.now(timezone.utc).isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'message': str(e)
         }), 500
 
 @app.route('/api/election', methods=['GET'])
@@ -397,16 +434,7 @@ def get_election():
         candidates = Candidate.query.filter_by(election_id=election.id).order_by(Candidate.classe).all()
         
         result = election.to_dict()
-        result['candidates'] = [{
-            'id': c.id,
-            'nom': c.nom,
-            'prenom': c.prenom,
-            'nom_complet': f"{c.prenom} {c.nom}",
-            'classe': c.classe,
-            'description': c.description,
-            'photo_url': c.photo_url,
-            'election_id': c.election_id
-        } for c in candidates]
+        result['candidates'] = [c.to_dict() for c in candidates]
         
         return jsonify(result)
     except Exception as e:
@@ -463,7 +491,11 @@ def submit_vote():
         ).first()
         
         if existing_vote:
-            return jsonify({'error': 'Vous avez déjà voté'}), 400
+            return jsonify({
+                'error': 'Vous avez déjà voté',
+                'has_voted': True,
+                'vote_date': existing_vote.date_vote.isoformat() if existing_vote.date_vote else None
+            }), 400
         
         # Vérifier si la candidate existe
         candidate = Candidate.query.filter_by(id=candidate_id, election_id=election.id).first()
@@ -493,7 +525,9 @@ def submit_vote():
             'confirmation_id': f"VOTE-{vote.id:06d}",
             'timestamp': vote.date_vote.isoformat() if vote.date_vote else now.isoformat(),
             'year': 2026,
-            'ecole': 'Cours privés Source de la Fontaine'
+            'ecole': 'Cours privés La Source de la Fontaine',
+            'candidate': f"{candidate.prenom} {candidate.nom}",
+            'classe': candidate.classe
         })
         
     except Exception as e:
@@ -541,7 +575,7 @@ def get_results():
             'results': results,
             'updated_at': datetime.now(timezone.utc).isoformat(),
             'year': 2026,
-            'ecole': 'Cours privés Source de la Fontaine'
+            'ecole': 'Cours privés La Source de la Fontaine'
         })
     except Exception as e:
         print(f"❌ Erreur résultats: {str(e)}")
@@ -549,7 +583,7 @@ def get_results():
 
 @app.route('/api/stats', methods=['GET'])
 def get_statistics():
-    """Statistiques détaillées - ADMIN SEULEMENT - VERSION CORRIGÉE"""
+    """Statistiques détaillées - ADMIN SEULEMENT"""
     if not check_admin_access():
         return jsonify({
             'error': 'Accès refusé',
@@ -596,6 +630,9 @@ def get_statistics():
                 'votes': c.votes_count
             })
         
+        # Trier par votes décroissants
+        votes_by_candidate.sort(key=lambda x: x['votes'], reverse=True)
+        
         # Liste des votants (limité à 50)
         votes = Vote.query.filter_by(election_id=election.id)\
             .order_by(Vote.created_at.desc())\
@@ -623,7 +660,7 @@ def get_statistics():
                 'date_debut': election.date_debut.isoformat() if election.date_debut else None,
                 'date_fin': election.date_fin.isoformat() if election.date_fin else None,
                 'statut': election.statut,
-                'temps_restant': election.get_temps_restant() if hasattr(election, 'get_temps_restant') else None
+                'temps_restant': election.get_temps_restant()
             },
             'statistics': {
                 'total_votes': total_votes,
@@ -648,7 +685,7 @@ def get_statistics():
             },
             'updated_at': now_utc.isoformat(),
             'year': 2026,
-            'ecole': 'Cours privés Source de la Fontaine',
+            'ecole': 'Cours privés La Source de la Fontaine',
             'access': 'admin'
         })
         
@@ -699,7 +736,8 @@ def verify_email():
         
         if has_voted:
             response['vote_date'] = vote.date_vote.isoformat() if vote.date_vote else None
-            response['message'] = 'Vous avez déjà voté'
+            response['message'] = 'Vous avez déjà voté pour cette élection'
+            response['can_vote'] = False
         elif can_vote:
             response['message'] = 'Vous pouvez voter'
         else:
@@ -732,7 +770,8 @@ def reset_votes():
             'success': True,
             'message': f'{deleted_count} votes réinitialisés',
             'votes_deleted': deleted_count,
-            'candidates_reset': len(candidates)
+            'candidates_reset': len(candidates),
+            'timestamp': datetime.now(timezone.utc).isoformat()
         })
     except Exception as e:
         db.session.rollback()
@@ -743,10 +782,8 @@ def reset_votes():
 
 if __name__ == '__main__':
     print("=" * 80)
-    print("🚀 DÉMARRAGE DU SYSTÈME DE VOTE SCOLAIRE 2026")
-    print("=" * 80)
-    print("🏫 ÉCOLE : Cours privés Source de la Fontaine")
-    print("🗳️  CANDIDATES :")
+    print("🏫 ÉCOLE : Cours privés La Source de la Fontaine")
+    print("🗳️  CANDIDATES 2026 :")
     print("   • Binta Diallo (3ème)")
     print("   • Maguette Ngom (6ème)")
     print("   • Eléna Nafissatou Gomis (5ème)")
@@ -761,11 +798,13 @@ if __name__ == '__main__':
         print("⚠️  Base de données non initialisée correctement")
     
     print("=" * 80)
-    print("📡 SERVEUR FLASK DÉMARRÉ")
     
+    # Obtenir le port depuis les variables d'environnement (pour Render)
     port = int(os.getenv('PORT', 10000))
     
+    print(f"📡 SERVEUR FLASK DÉMARRÉ")
     print(f"🌐 Port d'écoute: {port}")
+    print(f"🌍 URL Local: http://localhost:{port}")
     print(f"📋 API Élection : http://localhost:{port}/api/election")
     print(f"🔐 API Résultats : http://localhost:{port}/api/results?admin_secret=admin2026")
     print(f"📊 API Statistiques : http://localhost:{port}/api/stats?admin_secret=admin2026")
@@ -776,4 +815,5 @@ if __name__ == '__main__':
     print("👨‍🏫 PRÊT POUR LES VOTES DES PROFESSEURS !")
     print("=" * 80)
     
+    # Démarrer le serveur
     app.run(debug=False, port=port, host='0.0.0.0')
