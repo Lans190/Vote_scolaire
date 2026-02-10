@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import text
 from datetime import datetime, timedelta, timezone
 import os
 from dotenv import load_dotenv
@@ -9,7 +8,7 @@ from dotenv import load_dotenv
 # Charger les variables d'environnement
 load_dotenv()
 
-# Chemins - ADAPTÉ POUR RENDER
+# Chemins
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_PATH = os.path.join(BASE_DIR, '..', 'front')
 
@@ -19,20 +18,16 @@ print(f"📁 Existe: {os.path.exists(FRONTEND_PATH)}")
 app = Flask(__name__, static_folder=FRONTEND_PATH if os.path.exists(FRONTEND_PATH) else None)
 CORS(app)
 
-# ==================== CONFIGURATION SQLITE SIMPLE ====================
+# ==================== CONFIGURATION BASE DE DONNÉES ====================
 
-# Chemin de la base de données SQLite
 SQLITE_DB_PATH = os.path.join(BASE_DIR, 'votes.db')
-
-# URL SQLite pour SQLAlchemy
 DATABASE_URL = f"sqlite:///{SQLITE_DB_PATH}"
 
 print(f"🔗 Base de données SQLite: {SQLITE_DB_PATH}")
 
-# Configuration Flask
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev_secret_key_2026_vote_scolaire')
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'vote_scolaire_2026_fontaine')
 
 db = SQLAlchemy(app)
 
@@ -81,7 +76,8 @@ class Election(db.Model):
             jours = diff.days
             heures = diff.seconds // 3600
             minutes = (diff.seconds % 3600) // 60
-            return f"{jours}j {heures}h {minutes}m"
+            secondes = diff.seconds % 60
+            return f"{jours}j {heures:02d}h {minutes:02d}m"
         else:
             return "Terminé"
 
@@ -142,31 +138,27 @@ class Vote(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 
-# ==================== FONCTIONS ADMIN SIMPLIFIÉES ====================
+# ==================== FONCTIONS ADMIN ====================
 
 def check_admin_access():
-    """Vérifie si la requête provient de l'admin - VERSION SIMPLIFIÉE"""
+    """Vérifie si la requête provient de l'admin"""
     admin_secret = request.args.get('admin_secret')
     
-    # Utiliser le même secret que le frontend
-    expected_secret = 'admin_vote_2026_source_fontaine'
-    
-    print(f"🔍 Vérification admin:")
-    print(f"   Secret reçu: {admin_secret}")
-    print(f"   Secret attendu: {expected_secret}")
+    # Secret admin unique
+    expected_secret = 'admin2026'
     
     if admin_secret == expected_secret:
-        print("✅ Accès admin accordé")
+        print(f"✅ Accès admin accordé pour: {request.remote_addr}")
         return True
     
-    print("❌ Accès admin refusé")
+    print(f"❌ Accès admin refusé. Secret reçu: {admin_secret}")
     return False
 
-# ==================== ROUTES POUR LE FRONTEND ====================
+# ==================== ROUTES FRONTEND ====================
 
 @app.route('/')
 def index():
-    """Page d'accueil - Redirige vers le frontend"""
+    """Page d'accueil"""
     if os.path.exists(FRONTEND_PATH):
         return send_from_directory(FRONTEND_PATH, 'index.html')
     else:
@@ -174,31 +166,37 @@ def index():
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Système de Vote Scolaire 2026 - Cours privés Source de la Fontaine</title>
+            <title>Système de Vote Scolaire 2026</title>
             <style>
-                body { font-family: Arial, sans-serif; margin: 40px; text-align: center; }
-                h1 { color: #4361ee; }
-                .status { padding: 20px; margin: 20px; border-radius: 10px; }
-                .success { background: #d4edda; color: #155724; }
-                .error { background: #f8d7da; color: #721c24; }
-                .info { background: #d1ecf1; color: #0c5460; }
+                body { font-family: Arial, sans-serif; margin: 40px; text-align: center; background: #f8f9fa; }
+                .container { max-width: 800px; margin: 0 auto; }
+                .header { background: linear-gradient(135deg, #4361ee, #3a0ca3); color: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; }
+                .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin: 20px 0; }
+                .api-link { display: block; padding: 15px; background: #e9ecef; margin: 10px 0; border-radius: 5px; text-decoration: none; color: #333; }
+                .api-link:hover { background: #dee2e6; }
             </style>
         </head>
         <body>
-            <h1>🗳️ Système de Vote Scolaire 2026</h1>
-            <h2>Cours privés "Source de la Fontaine"</h2>
-            <div class="status info">
-                <h2>API Backend Opérationnelle</h2>
-                <p>Le serveur Flask fonctionne correctement.</p>
-                <p>Frontend non trouvé dans le dossier /front</p>
+            <div class="container">
+                <div class="header">
+                    <h1>🗳️ Système de Vote Scolaire 2026</h1>
+                    <h2>Cours privés "Source de la Fontaine"</h2>
+                </div>
+                
+                <div class="card">
+                    <h3>📡 API Backend Opérationnelle</h3>
+                    <p>Le serveur Flask fonctionne correctement.</p>
+                    
+                    <a href="/api/status" class="api-link">📊 /api/status - Statut du système</a>
+                    <a href="/api/election" class="api-link">🏫 /api/election - Élection active</a>
+                    <a href="/api/results?admin_secret=admin2026" class="api-link">🔐 /api/results - Résultats (Admin)</a>
+                    <a href="/api/stats?admin_secret=admin2026" class="api-link">📈 /api/stats - Statistiques (Admin)</a>
+                </div>
+                
+                <p style="margin-top: 30px; color: #666;">
+                    © 2026 - Cours privés Source de la Fontaine - Tous droits réservés
+                </p>
             </div>
-            <div class="status success">
-                <h3>📡 API Disponible</h3>
-                <p><a href="/api/status">/api/status</a> - Statut du système</p>
-                <p><a href="/api/election">/api/election</a> - Élection active</p>
-                <p><a href="/api/results?admin_secret=admin2026">/api/results</a> - Résultats (Admin)</p>
-            </div>
-            <p>© 2026 - Cours privés Source de la Fontaine - Tous droits réservés</p>
         </body>
         </html>
         '''
@@ -211,68 +209,7 @@ def serve_frontend(path):
     else:
         return jsonify({'error': 'Frontend non disponible'}), 404
 
-@app.route('/api/')
-def api_docs():
-    """Documentation de l'API"""
-    return '''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>API Vote Scolaire 2026 - Documentation Admin</title>
-        <style>
-            body { font-family: Arial, sans-serif; margin: 40px; }
-            h1 { color: #333; }
-            .endpoint { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
-            code { background: #eee; padding: 2px 5px; }
-            a { color: #4361ee; text-decoration: none; }
-            .admin { background: #fff3cd; border-left: 4px solid #ffc107; }
-        </style>
-    </head>
-    <body>
-        <h1>🗳️ API Vote Scolaire 2026 - Cours privés Source de la Fontaine</h1>
-        <p><a href="/">← Retour à l'application</a></p>
-        
-        <div class="endpoint">
-            <h3>GET <code>/api/status</code></h3>
-            <p>Statut complet du système</p>
-        </div>
-        
-        <div class="endpoint">
-            <h3>GET <code>/api/election</code></h3>
-            <p>Récupère l'élection active avec les candidats (sans résultats)</p>
-        </div>
-        
-        <div class="endpoint admin">
-            <h3>GET <code>/api/results?admin_secret=admin2026</code></h3>
-            <p><strong>ADMIN ONLY</strong> - Résultats complets du vote</p>
-        </div>
-        
-        <div class="endpoint admin">
-            <h3>GET <code>/api/stats?admin_secret=admin2026</code></h3>
-            <p><strong>ADMIN ONLY</strong> - Statistiques détaillées</p>
-        </div>
-        
-        <div class="endpoint">
-            <h3>POST <code>/api/vote</code></h3>
-            <p>Enregistre un vote</p>
-            <p>Body JSON: {"professeur_email": "email@ecole.fr", "candidate_id": 1}</p>
-        </div>
-        
-        <div class="endpoint">
-            <h3>POST <code>/api/verify-email</code></h3>
-            <p>Vérifie si un email a déjà voté</p>
-            <p>Body JSON: {"email": "email@ecole.fr"}</p>
-        </div>
-        
-        <div class="endpoint admin">
-            <h3>POST <code>/api/reset-test</code></h3>
-            <p><strong>ADMIN ONLY</strong> - Réinitialise les données de test</p>
-        </div>
-    </body>
-    </html>
-    '''
-
-# ==================== INITIALISATION ====================
+# ==================== INITIALISATION BASE DE DONNÉES ====================
 
 def ensure_timezone(dt):
     """Assure qu'une datetime a un timezone UTC"""
@@ -283,64 +220,87 @@ def ensure_timezone(dt):
     return dt.astimezone(timezone.utc)
 
 def init_database():
-    """Initialise la base de données SQLite avec les nouvelles dates"""
+    """Initialise la base de données SQLite"""
     with app.app_context():
         try:
-            print(f"🔗 Initialisation de SQLite...")
+            print("🔗 Initialisation de la base de données...")
             
-            # Créer les tables si elles n'existent pas
+            # Créer les tables
             db.create_all()
-            print("✅ Tables SQLite créées/vérifiées")
+            print("✅ Tables créées/vérifiées")
             
             # Vérifier si une élection existe
             election = Election.query.filter_by(statut='active').first()
             
             if not election:
-                # NOUVELLES DATES : Lundi 9 février au vendredi 13 février 2026
-                date_debut = datetime(2026, 2, 9, 0, 0, 0, tzinfo=timezone.utc)  # Lundi 9 février
-                date_fin = datetime(2026, 2, 13, 23, 59, 59, tzinfo=timezone.utc)  # Vendredi 13 février
+                # Période de vote : 9-13 février 2026
+                date_debut = datetime(2026, 2, 9, 0, 0, 0, tzinfo=timezone.utc)
+                date_fin = datetime(2026, 2, 13, 23, 59, 59, tzinfo=timezone.utc)
                 
                 election = Election(
-                    titre="Élection des Délégués Élèves 2026 - Cours privés Source de la Fontaine",
-                    description="Vote des professeurs pour élire les délégués élèves de chaque classe. Période de vote : du lundi 9 au vendredi 13 février 2026.",
+                    titre="Élection des Délégués Élèves 2026",
+                    description="Vote des professeurs pour élire les délégués élèves de chaque classe. Période de vote : du 9 au 13 février 2026.",
                     date_debut=date_debut,
                     date_fin=date_fin,
                     statut='active'
                 )
                 db.session.add(election)
                 db.session.commit()
-                print("✅ NOUVELLE ÉLECTION 2026 créée")
-                print(f"📅 Nouvelle période de vote : {date_debut.strftime('%d/%m/%Y')} au {date_fin.strftime('%d/%m/%Y')}")
+                print(f"✅ Nouvelle élection 2026 créée")
+                print(f"📅 Période de vote : {date_debut.strftime('%d/%m/%Y')} au {date_fin.strftime('%d/%m/%Y')}")
             
+            # Vérifier et créer les candidates
             candidates_count = Candidate.query.filter_by(election_id=election.id).count()
             
             if candidates_count == 0:
+                # Liste des candidates réelles
                 candidates_data = [
-                    {'nom': 'Martin', 'prenom': 'Léa', 'classe': '6ème',
-                     'description': 'Sérieuse, à l\'écoute, toujours prête à aider ses camarades. Projet : organiser des séances de tutorat entre élèves.'},
-                    {'nom': 'Dubois', 'prenom': 'Thomas', 'classe': '5ème',
-                     'description': 'Dynamique, créatif, bon communicateur. Projet : créer un journal scolaire numérique.'},
-                    {'nom': 'Bernard', 'prenom': 'Emma', 'classe': '4ème',
-                     'description': 'Organisée, impliquée dans la vie scolaire. Projet : améliorer l\'ambiance dans les couloirs.'},
-                    {'nom': 'Petit', 'prenom': 'Lucas', 'classe': '3ème',
-                     'description': 'Responsable, expérimenté. Projet : organiser des sessions de révision pour le brevet.'},
-                    {'nom': 'Durand', 'prenom': 'Chloé', 'classe': '2nde',
-                     'description': 'Mature, motivée. Projet : créer des activités inter-niveaux entre collège et lycée.'}
+                    {
+                        'nom': 'Diallo',
+                        'prenom': 'Binta',
+                        'classe': '3ème',
+                        'description': ''
+                    },
+                    {
+                        'nom': 'Ngom',
+                        'prenom': 'Maguette',
+                        'classe': '6ème',
+                        'description': ''
+                    },
+                    {
+                        'nom': 'Gomis',
+                        'prenom': 'Eléna Nafissatou',
+                        'classe': '5ème',
+                        'description': ''
+                    },
+                    {
+                        'nom': 'Séne',
+                        'prenom': 'Diasse',
+                        'classe': '2nde',
+                        'description': ''
+                    },
+                    {
+                        'nom': 'Ndong',
+                        'prenom': 'Ndeye Fatou',
+                        'classe': '4ème',
+                        'description': ''
+                    }
                 ]
                 
                 for cand_data in candidates_data:
+                    # Générer une photo d'avatar colorée
                     candidate = Candidate(
                         nom=cand_data['nom'],
                         prenom=cand_data['prenom'],
                         classe=cand_data['classe'],
                         description=cand_data['description'],
                         election_id=election.id,
-                        photo_url=f"https://ui-avatars.com/api/?name={cand_data['prenom']}+{cand_data['nom']}&background=4361ee&color=fff&size=128"
+                        photo_url=f"https://ui-avatars.com/api/?name={cand_data['prenom']}+{cand_data['nom']}&background=random&color=fff&size=200&bold=true"
                     )
                     db.session.add(candidate)
                 
                 db.session.commit()
-                print(f"✅ {len(candidates_data)} candidats créés")
+                print(f"✅ {len(candidates_data)} candidates créées")
             
             total_votes = Vote.query.count()
             print(f"📊 Total votes enregistrés : {total_votes}")
@@ -348,7 +308,7 @@ def init_database():
             return True
             
         except Exception as e:
-            print(f"❌ Erreur d'initialisation SQLite: {str(e)}")
+            print(f"❌ Erreur d'initialisation: {str(e)}")
             import traceback
             traceback.print_exc()
             return False
@@ -366,6 +326,7 @@ def get_system_status():
         now = datetime.now(timezone.utc)
         status = "inactive"
         can_vote = False
+        temps_restant = None
         
         if election:
             debut = ensure_timezone(election.date_debut)
@@ -375,57 +336,64 @@ def get_system_status():
                 if debut <= now <= fin:
                     status = "active"
                     can_vote = True
+                    # Calcul précis du temps restant
+                    temps_restant_seconds = int((fin - now).total_seconds())
+                    jours = temps_restant_seconds // 86400
+                    heures = (temps_restant_seconds % 86400) // 3600
+                    minutes = (temps_restant_seconds % 3600) // 60
+                    temps_restant = f"{jours}j {heures:02d}h {minutes:02d}m"
                 elif now < debut:
                     status = "pending"
                 else:
                     status = "finished"
         
+        # Nombre total de professeurs (estimation)
+        total_professeurs = 50
+        participation_rate = round((votes_count / total_professeurs * 100), 1) if total_professeurs > 0 else 0
+        
         return jsonify({
             'system': {
                 'status': 'online',
                 'timestamp': now.isoformat(),
-                'database': 'SQLite (fichier local)',
-                'environment': os.getenv('RENDER', 'development'),
+                'database': 'SQLite',
                 'year': 2026,
-                'ecole': 'Cours privés Source de la Fontaine'
+                'ecole': 'Cours privés Source de la Fontaine',
+                'version': '2.0.0'
             },
             'election': {
                 'status': status,
                 'title': election.titre if election else None,
                 'date_debut': election.date_debut.isoformat() if election else None,
                 'date_fin': election.date_fin.isoformat() if election else None,
-                'temps_restant': election.get_temps_restant() if election else None,
+                'temps_restant': temps_restant,
                 'can_vote': can_vote
             },
             'statistics': {
                 'candidates': candidates_count,
                 'votes': votes_count,
-                'participation_rate': round((votes_count / 50 * 100), 2) if votes_count > 0 else 0
+                'total_professeurs': total_professeurs,
+                'participation_rate': participation_rate,
+                'remaining_votes': max(0, total_professeurs - votes_count)
             }
         })
     except Exception as e:
         print(f"❌ Erreur status: {str(e)}")
         return jsonify({
-            'system': {
-                'status': 'online',
-                'timestamp': datetime.now(timezone.utc).isoformat(),
-                'year': 2026,
-                'ecole': 'Cours privés Source de la Fontaine'
-            }
-        })
+            'error': 'Erreur serveur',
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }), 500
 
 @app.route('/api/election', methods=['GET'])
 def get_election():
-    """Récupère l'élection active SANS résultats (pour les professeurs)"""
+    """Récupère l'élection active avec les candidates"""
     try:
         election = Election.query.filter_by(statut='active').first()
         if not election:
             return jsonify({'error': 'Aucune élection active'}), 404
         
-        candidates = Candidate.query.filter_by(election_id=election.id).all()
+        candidates = Candidate.query.filter_by(election_id=election.id).order_by(Candidate.classe).all()
         
         result = election.to_dict()
-        # Masquer les votes_count pour les professeurs
         result['candidates'] = [{
             'id': c.id,
             'nom': c.nom,
@@ -435,60 +403,55 @@ def get_election():
             'description': c.description,
             'photo_url': c.photo_url,
             'election_id': c.election_id
-            # NE PAS INCLURE votes_count ici
         } for c in candidates]
         
         return jsonify(result)
     except Exception as e:
         print(f"❌ Erreur récupération élection: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Erreur serveur'}), 500
 
 @app.route('/api/vote', methods=['POST'])
 def submit_vote():
-    """Enregistre un nouveau vote avec vérification complète"""
+    """Enregistre un nouveau vote"""
     try:
         data = request.json
         if not data:
             return jsonify({'error': 'Données JSON requises'}), 400
         
-        print(f"📥 Données reçues: {data}")
-        
-        professeur_email = data.get('professeur_email')
+        professeur_email = data.get('professeur_email', '').strip().lower()
         candidate_id = data.get('candidate_id')
         
+        # Validation
         if not professeur_email:
-            return jsonify({'error': 'professeur_email est requis'}), 400
+            return jsonify({'error': 'Email du professeur requis'}), 400
         
         if not candidate_id:
-            return jsonify({'error': 'candidate_id est requis'}), 400
+            return jsonify({'error': 'ID de la candidate requis'}), 400
         
-        # Validation email
+        # Validation email simple
         if '@' not in professeur_email or '.' not in professeur_email:
-            return jsonify({'error': 'Email invalide'}), 400
+            return jsonify({'error': 'Format d\'email invalide'}), 400
         
-        # Convertir candidate_id en int
         try:
             candidate_id = int(candidate_id)
         except ValueError:
-            return jsonify({'error': 'candidate_id doit être un nombre valide'}), 400
+            return jsonify({'error': 'ID de candidate invalide'}), 400
         
-        # Vérifier si l'élection est active
+        # Vérifier l'élection active
         election = Election.query.filter_by(statut='active').first()
         if not election:
             return jsonify({'error': 'Aucune élection active'}), 400
         
-        # Vérifier les dates de l'élection (avec timezones)
+        # Vérifier les dates
         now = datetime.now(timezone.utc)
         debut = ensure_timezone(election.date_debut)
         fin = ensure_timezone(election.date_fin)
         
-        # Vérifier si l'élection a commencé
         if debut and now < debut:
-            return jsonify({'error': f'L\'élection n\'a pas encore commencé. Début: {debut.strftime("%d/%m/%Y %H:%M")} GMT'}), 400
+            return jsonify({'error': 'L\'élection n\'a pas encore commencé'}), 400
         
-        # Vérifier si l'élection est terminée
         if fin and now > fin:
-            return jsonify({'error': f'L\'élection est terminée depuis le {fin.strftime("%d/%m/%Y %H:%M")} GMT'}), 400
+            return jsonify({'error': 'L\'élection est terminée'}), 400
         
         # Vérifier si le professeur a déjà voté
         existing_vote = Vote.query.filter_by(
@@ -497,14 +460,14 @@ def submit_vote():
         ).first()
         
         if existing_vote:
-            return jsonify({'error': 'Ce professeur a déjà voté'}), 400
+            return jsonify({'error': 'Vous avez déjà voté'}), 400
         
         # Vérifier si la candidate existe
         candidate = Candidate.query.filter_by(id=candidate_id, election_id=election.id).first()
         if not candidate:
-            return jsonify({'error': 'Candidat non trouvé'}), 404
+            return jsonify({'error': 'Candidate non trouvée'}), 404
         
-        # Créer le vote
+        # Enregistrer le vote
         vote = Vote(
             election_id=election.id,
             candidate_id=candidate_id,
@@ -514,29 +477,26 @@ def submit_vote():
         )
         
         # Mettre à jour le compteur de votes
-        candidate.votes_count = candidate.votes_count + 1
+        candidate.votes_count += 1
         
         db.session.add(vote)
         db.session.commit()
         
-        print(f"✅ Vote 2026 enregistré pour {professeur_email} - Candidat: {candidate.prenom} {candidate.nom}")
+        print(f"✅ Vote enregistré: {professeur_email} → {candidate.prenom} {candidate.nom}")
         
-        # Réponse simple sans détails (le professeur ne voit pas qui il a voté)
         return jsonify({
             'success': True,
             'message': 'Votre vote a été enregistré avec succès',
-            'election_status': 'Vote accepté',
+            'confirmation_id': f"VOTE-{vote.id:06d}",
+            'timestamp': vote.date_vote.isoformat(),
             'year': 2026,
-            'ecole': 'Cours privés Source de la Fontaine',
-            'note': 'Merci pour votre participation. Les résultats seront communiqués par l\'administration.'
+            'ecole': 'Cours privés Source de la Fontaine'
         })
         
     except Exception as e:
         db.session.rollback()
         print(f"❌ Erreur lors du vote: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': f'Erreur serveur: {str(e)}'}), 500
+        return jsonify({'error': 'Erreur serveur lors de l\'enregistrement du vote'}), 500
 
 @app.route('/api/results', methods=['GET'])
 def get_results():
@@ -562,11 +522,13 @@ def get_results():
             results.append({
                 'candidate': candidate.to_dict(),
                 'votes': candidate.votes_count,
-                'percentage': round(percentage, 2),
-                'rank': None
+                'percentage': round(percentage, 2)
             })
         
+        # Trier par nombre de votes (décroissant)
         results.sort(key=lambda x: x['votes'], reverse=True)
+        
+        # Ajouter le rang
         for i, result in enumerate(results, 1):
             result['rank'] = i
         
@@ -576,12 +538,11 @@ def get_results():
             'results': results,
             'updated_at': datetime.now(timezone.utc).isoformat(),
             'year': 2026,
-            'ecole': 'Cours privés Source de la Fontaine',
-            'access': 'admin'
+            'ecole': 'Cours privés Source de la Fontaine'
         })
     except Exception as e:
         print(f"❌ Erreur résultats: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Erreur serveur'}), 500
 
 @app.route('/api/stats', methods=['GET'])
 def get_statistics():
@@ -600,6 +561,7 @@ def get_statistics():
         
         total_votes = Vote.query.filter_by(election_id=election.id).count()
         total_candidates = Candidate.query.filter_by(election_id=election.id).count()
+        total_professeurs = 50
         
         now_utc = datetime.now(timezone.utc)
         
@@ -607,69 +569,65 @@ def get_statistics():
         fin = ensure_timezone(election.date_fin)
         temps_restant = fin - now_utc if fin and fin > now_utc else timedelta(0)
         
-        # Dernières 24 heures
-        yesterday_utc = now_utc - timedelta(hours=24)
-        last_24h = Vote.query.filter(
-            Vote.date_vote >= yesterday_utc,
-            Vote.election_id == election.id
-        ).count()
-        
-        # Votes par candidat
+        # Votes par classe
         candidates = Candidate.query.filter_by(election_id=election.id).all()
-        votes_by_candidate = [
-            {
-                'nom': c.nom,
-                'prenom': c.prenom,
+        votes_by_candidate = []
+        for c in candidates:
+            votes_by_candidate.append({
+                'id': c.id,
                 'nom_complet': f"{c.prenom} {c.nom}",
                 'classe': c.classe,
                 'votes': c.votes_count
-            }
-            for c in candidates
-        ]
+            })
         
-        # Liste des votants
-        votes = Vote.query.filter_by(election_id=election.id).all()
-        votants = [
-            {
+        # Derniers votes (max 10)
+        recent_votes = Vote.query.filter_by(election_id=election.id)\
+            .order_by(Vote.date_vote.desc())\
+            .limit(10)\
+            .all()
+        
+        votants = []
+        for v in recent_votes:
+            candidate = Candidate.query.get(v.candidate_id)
+            votants.append({
                 'email': v.professeur_email,
                 'date_vote': v.date_vote.isoformat() if v.date_vote else None,
-                'candidate_id': v.candidate_id
-            }
-            for v in votes
-        ]
+                'candidate': candidate.nom_complet if candidate else f"Candidate #{v.candidate_id}",
+                'candidate_classe': candidate.classe if candidate else None
+            })
         
         return jsonify({
             'election': election.to_dict(),
             'statistics': {
                 'total_votes': total_votes,
                 'total_candidates': total_candidates,
-                'votes_last_24h': last_24h,
-                'participation_rate': round((total_votes / 50 * 100), 2) if total_votes > 0 else 0,
+                'total_professeurs': total_professeurs,
+                'participation_rate': round((total_votes / total_professeurs * 100), 2) if total_professeurs > 0 else 0,
+                'remaining_votes': max(0, total_professeurs - total_votes),
                 'temps_restant_jours': temps_restant.days,
                 'temps_restant_heures': int(temps_restant.seconds // 3600),
+                'temps_restant_minutes': int((temps_restant.seconds % 3600) // 60),
                 'votes_by_candidate': votes_by_candidate
             },
-            'votants': votants,
+            'recent_votes': votants,
+            'total_votants': total_votes,
             'periode_vote': {
                 'date_debut': election.date_debut.isoformat() if election.date_debut else None,
                 'date_fin': election.date_fin.isoformat() if election.date_fin else None,
                 'vote_actif': election.date_debut and election.date_fin and (election.date_debut <= now_utc <= election.date_fin)
             },
-            'year': 2026,
-            'ecole': 'Cours privés Source de la Fontaine',
-            'updated_at': now_utc.isoformat(),
-            'access': 'admin'
+            'updated_at': now_utc.isoformat()
         })
     except Exception as e:
         print(f"❌ Erreur statistiques: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Erreur serveur'}), 500
 
 @app.route('/api/verify-email', methods=['POST'])
 def verify_email():
     """Vérifie si un email a déjà voté"""
     try:
         data = request.json
-        email = data.get('email')
+        email = data.get('email', '').strip().lower()
         
         if not email:
             return jsonify({'error': 'Email requis'}), 400
@@ -683,41 +641,46 @@ def verify_email():
             professeur_email=email
         ).first()
         
-        # Vérifier aussi si l'élection est en cours
+        # Vérifier si l'élection est en cours
         now = datetime.now(timezone.utc)
         debut = ensure_timezone(election.date_debut)
         fin = ensure_timezone(election.date_fin)
         
         can_vote = debut and fin and (debut <= now <= fin)
+        has_voted = vote is not None
         
-        return jsonify({
-            'has_voted': vote is not None,
+        response = {
+            'has_voted': has_voted,
             'email': email,
-            'election_id': election.id,
-            'election_title': election.titre,
             'can_vote': can_vote,
-            'vote_period': f"{debut.strftime('%d/%m/%Y %H:%M') if debut else 'N/A'} GMT - {fin.strftime('%d/%m/%Y %H:%M') if fin else 'N/A'} GMT",
-            'year': 2026,
-            'ecole': 'Cours privés Source de la Fontaine'
-        })
+            'election_status': 'active' if can_vote else 'inactive'
+        }
+        
+        if has_voted:
+            response['vote_date'] = vote.date_vote.isoformat() if vote.date_vote else None
+            response['message'] = 'Vous avez déjà voté'
+        elif can_vote:
+            response['message'] = 'Vous pouvez voter'
+        else:
+            response['message'] = 'La période de vote n\'est pas active'
+        
+        return jsonify(response)
+        
     except Exception as e:
         print(f"❌ Erreur vérification email: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Erreur serveur'}), 500
 
-@app.route('/api/reset-test', methods=['POST'])
-def reset_test_data():
-    """Réinitialise les données de test - ADMIN SEULEMENT"""
+@app.route('/api/reset-votes', methods=['POST'])
+def reset_votes():
+    """Réinitialise tous les votes - ADMIN SEULEMENT"""
     if not check_admin_access():
-        return jsonify({
-            'error': 'Accès refusé',
-            'message': 'Cette fonctionnalité est réservée à l\'administration'
-        }), 403
+        return jsonify({'error': 'Accès refusé'}), 403
     
     try:
         # Supprimer tous les votes
-        Vote.query.delete()
+        deleted_count = Vote.query.delete()
         
-        # Réinitialiser les compteurs de votes
+        # Réinitialiser les compteurs
         candidates = Candidate.query.all()
         for candidate in candidates:
             candidate.votes_count = 0
@@ -726,51 +689,48 @@ def reset_test_data():
         
         return jsonify({
             'success': True,
-            'message': 'Données de test réinitialisées',
-            'votes_deleted': True,
-            'candidates_reset': len(candidates),
-            'year': 2026,
-            'ecole': 'Cours privés Source de la Fontaine',
-            'access': 'admin'
+            'message': f'{deleted_count} votes réinitialisés',
+            'votes_deleted': deleted_count,
+            'candidates_reset': len(candidates)
         })
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        print(f"❌ Erreur réinitialisation: {str(e)}")
+        return jsonify({'error': 'Erreur serveur'}), 500
 
-# ==================== LANCEMENT ====================
+# ==================== LANCEMENT DE L'APPLICATION ====================
 
 if __name__ == '__main__':
     print("=" * 80)
     print("🚀 DÉMARRAGE DU SYSTÈME DE VOTE SCOLAIRE 2026")
     print("=" * 80)
     print("🏫 ÉCOLE : Cours privés Source de la Fontaine")
-    print("🗄️  BASE DE DONNÉES : SQLite (fichier local)")
+    print("🗳️  CANDIDATES :")
+    print("   • Binta Diallo (3ème)")
+    print("   • Maguette Ngom (6ème)")
+    print("   • Eléna Nafissatou Gomis (5ème)")
+    print("   • Diasse Séne (2nde)")
+    print("   • Ndeye Fatou Ndong (4ème)")
     print("=" * 80)
     
     # Initialiser la base de données
-    db_initialized = init_database()
-    
-    if db_initialized:
+    if init_database():
         print("✅ Base de données initialisée avec succès")
     else:
-        print("❌ Base de données non initialisée correctement")
-        print("💡 L'application démarrera mais certaines fonctionnalités pourraient ne pas fonctionner")
+        print("⚠️  Base de données non initialisée correctement")
     
     print("=" * 80)
     print("📡 SERVEUR FLASK DÉMARRÉ")
     
-    # Obtenir le port de Render ou utiliser 10000
     port = int(os.getenv('PORT', 10000))
     
     print(f"🌐 Port d'écoute: {port}")
-    print(f"📋 API Élection (professeurs)  : http://localhost:{port}/api/election")
-    print(f"🔐 API Résultats (admin)       : http://localhost:{port}/api/results?admin_secret=admin2026")
-    print(f"📊 API Statistiques (admin)    : http://localhost:{port}/api/stats?admin_secret=admin2026")
-    print(f"⚙️  API Status                  : http://localhost:{port}/api/status")
+    print(f"📋 API Élection : http://localhost:{port}/api/election")
+    print(f"🔐 API Résultats : http://localhost:{port}/api/results?admin_secret=admin2026")
+    print(f"📊 API Statistiques : http://localhost:{port}/api/stats?admin_secret=admin2026")
+    print(f"⚙️  API Status : http://localhost:{port}/api/status")
     print("=" * 80)
-    print("⏰ PÉRIODE DE VOTE 2026 :")
-    print("   Début : Lundi 9 février 2026, 00h00 GMT")
-    print("   Fin   : Vendredi 13 février 2026, 23h59 GMT")
+    print("⏰ PÉRIODE DE VOTE : 9-13 février 2026")
     print("=" * 80)
     print("👨‍🏫 PRÊT POUR LES VOTES DES PROFESSEURS !")
     print("=" * 80)
