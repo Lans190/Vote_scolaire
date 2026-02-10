@@ -1,5 +1,5 @@
-// Configuration de l'API
-const API_BASE_URL = 'https://vote-scolaire.onrender.com';
+// Configuration de l'API - VERSION CORRIGÉE
+const API_BASE_URL = window.location.origin; // IMPORTANT: Utilise l'URL actuelle
 const API_ENDPOINTS = {
     election: `${API_BASE_URL}/api/election`,
     vote: `${API_BASE_URL}/api/vote`,
@@ -12,7 +12,7 @@ const API_ENDPOINTS = {
 // Variables globales
 let currentElection = null;
 let candidates = [];
-let selectedCandidate = null; // Variable pour stocker l'objet candidate sélectionnée
+let selectedCandidate = null;
 let userEmail = null;
 let hasVoted = false;
 let electionStatus = '';
@@ -21,11 +21,11 @@ let selectedCandidateId = null;
 // Éléments DOM
 const elements = {
     // En-tête et statut
-    electionInfo: document.getElementById('electionInfo'),
     statusBanner: document.getElementById('statusBanner'),
     statusMessage: document.getElementById('statusMessage'),
     timeRemaining: document.getElementById('timeRemaining'),
     votesCount: document.getElementById('votesCount'),
+    participationRate: document.getElementById('participationRate'),
     
     // Sections principales
     emailSection: document.getElementById('emailSection'),
@@ -39,9 +39,9 @@ const elements = {
     verifyBtn: document.getElementById('verifyBtn'),
     emailError: document.getElementById('emailError'),
     
-    // Section candidates - CORRECTION ICI : renommé en selectedCandidatePanel
+    // Section candidates
     candidatesGrid: document.getElementById('candidatesGrid'),
-    selectedCandidatePanel: document.getElementById('selectedCandidate'), // CHANGÉ : selectedCandidate → selectedCandidatePanel
+    selectedCandidatePanel: document.getElementById('selectedCandidate'),
     selectedInfo: document.getElementById('selectedInfo'),
     voteBtn: document.getElementById('voteBtn'),
     loadingCandidates: document.getElementById('loadingCandidates'),
@@ -78,18 +78,29 @@ const elements = {
 // ==================== INITIALISATION ====================
 
 document.addEventListener('DOMContentLoaded', () => {
-    initializeApp();
-    setupEventListeners();
-    updateServerInfo();
+    console.log('🚀 Initialisation du système de vote...');
+    console.log('🌐 URL API:', API_BASE_URL);
+    
+    // Initialisation de base
     updateFooterYear();
+    updateServerInfo();
+    
+    // Vérifier la connexion et charger les données
+    initializeApp();
+    
+    // Configurer les événements
+    setupEventListeners();
 });
 
 async function initializeApp() {
     try {
-        showLoader('Initialisation du système...');
+        showLoader('Connexion au système...');
         
         // Vérifier la connexion API
-        await checkAPI();
+        const isConnected = await checkAPI();
+        if (!isConnected) {
+            throw new Error('Impossible de se connecter au serveur');
+        }
         
         // Charger les données du système
         await loadSystemStatus();
@@ -112,7 +123,13 @@ async function initializeApp() {
 
 async function checkAPI() {
     try {
-        const response = await fetchWithTimeout(API_ENDPOINTS.status, { timeout: 8000 });
+        console.log('🔗 Test connexion API...');
+        const response = await fetch(API_ENDPOINTS.status, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
         
         if (!response.ok) {
             throw new Error(`Serveur indisponible (${response.status})`);
@@ -120,16 +137,16 @@ async function checkAPI() {
         
         const data = await response.json();
         
-        if (data.system && data.system.status === 'error') {
-            throw new Error('Erreur de configuration du serveur');
+        if (data.system && data.system.status !== 'online') {
+            throw new Error('Serveur en erreur');
         }
         
         console.log('✅ API connectée:', data.system);
         return true;
         
     } catch (error) {
-        console.error('Erreur connexion API:', error);
-        throw new Error('Impossible de se connecter au serveur de vote');
+        console.error('❌ Erreur connexion API:', error);
+        return false;
     }
 }
 
@@ -137,7 +154,7 @@ async function loadSystemStatus() {
     try {
         const response = await fetch(API_ENDPOINTS.status);
         if (!response.ok) {
-            throw new Error(`Statut: ${response.status}`);
+            throw new Error(`Erreur HTTP: ${response.status}`);
         }
         
         const data = await response.json();
@@ -162,13 +179,15 @@ function updateSystemDisplay(data) {
     // Mettre à jour le temps restant
     if (elements.timeRemaining && data.election && data.election.temps_restant) {
         elements.timeRemaining.textContent = data.election.temps_restant;
-        elements.timeRemaining.style.display = 'block';
     }
     
     // Mettre à jour les statistiques
     if (data.statistics) {
-        if (elements.votesCount && data.statistics.total_votes !== undefined) {
-            elements.votesCount.textContent = data.statistics.total_votes;
+        if (elements.votesCount) {
+            elements.votesCount.textContent = data.statistics.votes || 0;
+        }
+        if (elements.participationRate) {
+            elements.participationRate.textContent = `${data.statistics.participation_rate || 0}%`;
         }
     }
     
@@ -186,7 +205,7 @@ function updateStatusMessage(election) {
     
     switch (election.status) {
         case 'active':
-            statusText = `🗳️ Vote en cours • ${election.temps_restant || 'Temps restant'} restant`;
+            statusText = `🗳️ Vote en cours • ${election.temps_restant || ''} restant`;
             statusType = 'success';
             break;
         case 'pending':
@@ -202,7 +221,6 @@ function updateStatusMessage(election) {
             statusType = 'info';
     }
     
-    elements.statusMessage.textContent = statusText;
     showStatus(statusText, statusType);
 }
 
@@ -217,15 +235,13 @@ function checkPreviousVote() {
         userEmail = savedEmail;
         hasVoted = true;
         
-        // Afficher la section "déjà voté" si l'élection est active
-        if (electionStatus === 'active' && elements.alreadyVotedSection) {
-            setTimeout(() => {
-                showAlreadyVotedSection();
-                if (elements.voteTimestamp && savedTimestamp) {
-                    const date = new Date(savedTimestamp);
-                    elements.voteTimestamp.textContent = `Vote enregistré le ${formatDateTime(date)}`;
-                }
-            }, 500);
+        // Afficher la section "déjà voté"
+        showAlreadyVotedSection();
+        
+        // Mettre à jour la date du vote
+        if (elements.voteTimestamp && savedTimestamp) {
+            const date = new Date(savedTimestamp);
+            elements.voteTimestamp.textContent = `Vote enregistré le ${formatDateTime(date)}`;
         }
     }
 }
@@ -251,8 +267,7 @@ function clearUserSession() {
 async function verifyEmail() {
     const email = elements.emailInput.value.trim().toLowerCase();
     
-    console.log("🔍 DEBUG - Email à vérifier:", email);
-    console.log("🔍 DEBUG - URL API:", API_ENDPOINTS.verify);
+    console.log('📧 Vérification email:', email);
     
     // Validation basique
     if (!email) {
@@ -269,8 +284,6 @@ async function verifyEmail() {
     showLoader('Vérification en cours...');
     
     try {
-        console.log("🔍 DEBUG - Envoi de la requête...");
-        
         const response = await fetch(API_ENDPOINTS.verify, {
             method: 'POST',
             headers: { 
@@ -280,18 +293,17 @@ async function verifyEmail() {
             body: JSON.stringify({ email: email })
         });
         
-        console.log("🔍 DEBUG - Statut réponse:", response.status, response.statusText);
+        console.log('📤 Réponse vérification:', response.status);
         
         if (!response.ok) {
-            console.error("🔍 DEBUG - Erreur HTTP:", response.status);
-            throw new Error(`Erreur serveur: ${response.status}`);
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Erreur serveur: ${response.status}`);
         }
         
         const data = await response.json();
-        console.log("🔍 DEBUG - Données reçues:", data);
+        console.log('📥 Données reçues:', data);
         
         if (data.error) {
-            console.error("🔍 DEBUG - Erreur API:", data.error);
             showEmailError(data.error);
             return;
         }
@@ -299,27 +311,26 @@ async function verifyEmail() {
         hasVoted = data.has_voted;
         
         if (hasVoted) {
-            console.log("🔍 DEBUG - Déjà voté");
+            console.log('✅ Déjà voté');
             saveVoteState(email, data.vote_date);
             showAlreadyVotedSection();
             showStatus('✅ Vous avez déjà voté', 'info');
         } else {
             if (data.can_vote) {
-                console.log("🔍 DEBUG - Peut voter");
+                console.log('✅ Peut voter');
                 await loadCandidates();
                 showCandidatesSection();
                 showStatus('✅ Email validé • Sélectionnez une candidate', 'success');
             } else {
-                console.log("🔍 DEBUG - Ne peut pas voter:", data.message);
+                console.log('❌ Ne peut pas voter');
                 showEmailError(data.message || 'La période de vote n\'est pas active');
                 showStatus('⏸️ Vote non disponible', 'warning');
             }
         }
         
     } catch (error) {
-        console.error('💥 Erreur complète:', error);
-        console.error('💥 Stack trace:', error.stack);
-        showEmailError('Erreur de connexion au serveur: ' + error.message);
+        console.error('💥 Erreur vérification:', error);
+        showEmailError('Erreur de connexion: ' + error.message);
         showStatus('❌ Erreur de vérification', 'error');
     } finally {
         hideLoader();
@@ -332,18 +343,12 @@ function saveVoteState(email, voteDate = null) {
     localStorage.setItem('vote_timestamp_2026', voteDate || new Date().toISOString());
 }
 
-function handleEmailEnter(event) {
-    if (event.key === 'Enter') {
-        verifyEmail();
-    }
-}
-
 function showEmailError(message) {
     if (elements.emailError) {
         elements.emailError.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
         elements.emailError.style.display = 'block';
         
-        // Animation d'apparition
+        // Animation
         elements.emailError.style.opacity = '0';
         elements.emailError.style.transform = 'translateY(-10px)';
         
@@ -352,17 +357,6 @@ function showEmailError(message) {
             elements.emailError.style.opacity = '1';
             elements.emailError.style.transform = 'translateY(0)';
         }, 10);
-        
-        // Auto-dissimulation après 8 secondes
-        setTimeout(() => {
-            if (elements.emailError.style.display === 'block') {
-                elements.emailError.style.opacity = '0';
-                elements.emailError.style.transform = 'translateY(-10px)';
-                setTimeout(() => {
-                    elements.emailError.style.display = 'none';
-                }, 300);
-            }
-        }, 8000);
     }
 }
 
@@ -393,8 +387,8 @@ async function loadCandidates() {
         displayCandidates(candidates);
         
     } catch (error) {
-        console.error('Erreur chargement:', error);
-        showError('Liste non disponible', 'Impossible de charger les candidates. Veuillez réessayer.');
+        console.error('Erreur chargement candidates:', error);
+        showError('Liste non disponible', 'Impossible de charger les candidates');
     } finally {
         hideLoader();
     }
@@ -473,16 +467,6 @@ function createCandidateCard(candidate) {
         }
     });
     
-    // Animation d'entrée
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(20px)';
-    
-    setTimeout(() => {
-        card.style.transition = 'all 0.5s ease';
-        card.style.opacity = '1';
-        card.style.transform = 'translateY(0)';
-    }, 10);
-    
     return card;
 }
 
@@ -503,12 +487,6 @@ function selectCandidate(candidateId) {
     if (selectedCard) {
         selectedCard.classList.add('selected');
         selectedCard.setAttribute('aria-selected', 'true');
-        
-        // Animation de sélection
-        selectedCard.style.transform = 'scale(0.98)';
-        setTimeout(() => {
-            selectedCard.style.transform = 'scale(1)';
-        }, 150);
     }
     
     selectedCandidateId = candidateId;
@@ -538,19 +516,8 @@ function selectCandidate(candidateId) {
             </div>
         `;
         
-        // Afficher avec animation - CORRECTION ICI : selectedCandidatePanel au lieu de selectedCandidate
+        // Afficher le panneau
         elements.selectedCandidatePanel.style.display = 'block';
-        elements.selectedCandidatePanel.style.opacity = '0';
-        
-        setTimeout(() => {
-            elements.selectedCandidatePanel.style.transition = 'all 0.3s ease';
-            elements.selectedCandidatePanel.style.opacity = '1';
-            elements.selectedCandidatePanel.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'start',
-                inline: 'nearest'
-            });
-        }, 10);
         
         // Activer le bouton de vote
         if (elements.voteBtn) {
@@ -588,13 +555,6 @@ function filterCandidates(classe) {
     }
     
     displayCandidates(filtered);
-    
-    // Message de filtre
-    if (filtered.length === 0) {
-        showStatus(`⚠️ Aucune candidate en ${classe}`, 'warning');
-    } else {
-        showStatus(`📋 ${filtered.length} candidate(s) en ${classe === 'all' ? 'toutes classes' : classe}`, 'info');
-    }
 }
 
 function clearSelection() {
@@ -606,15 +566,12 @@ function clearSelection() {
         card.setAttribute('aria-selected', 'false');
     });
     
-    // CORRECTION ICI : selectedCandidatePanel au lieu de selectedCandidate
     elements.selectedCandidatePanel.style.display = 'none';
     
     if (elements.voteBtn) {
         elements.voteBtn.disabled = true;
         elements.voteBtn.classList.remove('active');
     }
-    
-    showStatus('↩️ Sélection annulée • Choisissez une candidate', 'info');
 }
 
 // ==================== GESTION VOTE ====================
@@ -673,20 +630,8 @@ function showConfirmationModal() {
         </div>
     `;
     
-    // Afficher la modal avec animation
+    // Afficher la modal
     elements.confirmationModal.style.display = 'flex';
-    elements.confirmationModal.style.opacity = '0';
-    
-    setTimeout(() => {
-        elements.confirmationModal.style.transition = 'opacity 0.3s ease';
-        elements.confirmationModal.style.opacity = '1';
-    }, 10);
-    
-    // Focus sur le bouton d'annulation pour l'accessibilité
-    setTimeout(() => {
-        const cancelBtn = elements.confirmationModal.querySelector('.cancel-btn');
-        if (cancelBtn) cancelBtn.focus();
-    }, 100);
 }
 
 async function submitVote() {
@@ -719,7 +664,7 @@ async function submitVote() {
         saveVoteState(userEmail, data.timestamp);
         localStorage.setItem('vote_candidate_id_2026', selectedCandidateId.toString());
         
-        // Afficher l'ID de confirmation
+        // Afficher les détails de confirmation
         if (elements.confirmationId) {
             elements.confirmationId.textContent = data.confirmation_id || `VOTE-${Date.now()}`;
         }
@@ -740,9 +685,6 @@ async function submitVote() {
             loadSystemStatus().catch(console.error);
         }, 3000);
         
-        // Son de succès (si autorisé)
-        playSuccessSound();
-        
     } catch (error) {
         console.error('Erreur vote:', error);
         
@@ -755,11 +697,9 @@ async function submitVote() {
         } else if (error.message.includes('terminée')) {
             errorMessage = 'La période de vote est terminée';
             electionStatus = 'finished';
-            updateStatusMessage({ status: 'finished', temps_restant: 'Terminé' });
         } else if (error.message.includes('pas encore commencé')) {
             errorMessage = 'L\'élection n\'a pas encore commencé';
             electionStatus = 'pending';
-            updateStatusMessage({ status: 'pending', temps_restant: 'En attente' });
         }
         
         showError('Vote impossible', errorMessage);
@@ -773,13 +713,6 @@ async function submitVote() {
 function showCandidatesSection() {
     hideAllSections();
     elements.candidatesSection.style.display = 'block';
-    
-    // Animation d'entrée
-    elements.candidatesSection.style.opacity = '0';
-    setTimeout(() => {
-        elements.candidatesSection.style.transition = 'opacity 0.5s ease';
-        elements.candidatesSection.style.opacity = '1';
-    }, 10);
 }
 
 function showAlreadyVotedSection() {
@@ -797,16 +730,6 @@ function showAlreadyVotedSection() {
 function showConfirmationSection() {
     hideAllSections();
     elements.confirmationSection.style.display = 'block';
-    
-    // Animation
-    elements.confirmationSection.style.opacity = '0';
-    elements.confirmationSection.style.transform = 'translateY(20px)';
-    
-    setTimeout(() => {
-        elements.confirmationSection.style.transition = 'all 0.5s ease';
-        elements.confirmationSection.style.opacity = '1';
-        elements.confirmationSection.style.transform = 'translateY(0)';
-    }, 10);
 }
 
 function showErrorSection(title, message) {
@@ -830,7 +753,6 @@ function hideAllSections() {
     sections.forEach(section => {
         if (section) {
             section.style.display = 'none';
-            section.style.opacity = '0';
         }
     });
 }
@@ -839,10 +761,7 @@ function hideAllSections() {
 
 function hideModal() {
     if (elements.confirmationModal) {
-        elements.confirmationModal.style.opacity = '0';
-        setTimeout(() => {
-            elements.confirmationModal.style.display = 'none';
-        }, 300);
+        elements.confirmationModal.style.display = 'none';
     }
 }
 
@@ -850,12 +769,6 @@ function showSystemInfo() {
     if (elements.systemInfoModal) {
         loadSystemInfo();
         elements.systemInfoModal.style.display = 'flex';
-        elements.systemInfoModal.style.opacity = '0';
-        
-        setTimeout(() => {
-            elements.systemInfoModal.style.transition = 'opacity 0.3s ease';
-            elements.systemInfoModal.style.opacity = '1';
-        }, 10);
     }
 }
 
@@ -907,7 +820,7 @@ async function loadSystemInfo() {
                         <i class="fas fa-vote-yea"></i>
                         <div>
                             <strong>Votes enregistrés :</strong>
-                            <span>${data.statistics?.total_votes || '0'}</span>
+                            <span>${data.statistics?.votes || '0'}</span>
                         </div>
                     </div>
                     <div class="info-item">
@@ -934,31 +847,19 @@ async function loadSystemInfo() {
 
 function hideSystemInfoModal() {
     if (elements.systemInfoModal) {
-        elements.systemInfoModal.style.opacity = '0';
-        setTimeout(() => {
-            elements.systemInfoModal.style.display = 'none';
-        }, 300);
+        elements.systemInfoModal.style.display = 'none';
     }
 }
 
 function showAccessibilityInfo() {
     if (elements.accessibilityModal) {
         elements.accessibilityModal.style.display = 'flex';
-        elements.accessibilityModal.style.opacity = '0';
-        
-        setTimeout(() => {
-            elements.accessibilityModal.style.transition = 'opacity 0.3s ease';
-            elements.accessibilityModal.style.opacity = '1';
-        }, 10);
     }
 }
 
 function hideAccessibilityModal() {
     if (elements.accessibilityModal) {
-        elements.accessibilityModal.style.opacity = '0';
-        setTimeout(() => {
-            elements.accessibilityModal.style.display = 'none';
-        }, 300);
+        elements.accessibilityModal.style.display = 'none';
     }
 }
 
@@ -967,40 +868,24 @@ function hideAccessibilityModal() {
 function showLoader(message = 'Chargement...') {
     if (elements.loaderMessage) {
         elements.loaderMessage.textContent = message;
-        elements.loaderMessage.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${message}`;
     }
     if (elements.globalLoader) {
         elements.globalLoader.style.display = 'flex';
-        elements.globalLoader.style.opacity = '0';
-        
-        setTimeout(() => {
-            elements.globalLoader.style.transition = 'opacity 0.3s ease';
-            elements.globalLoader.style.opacity = '1';
-        }, 10);
     }
 }
 
 function hideLoader() {
     if (elements.globalLoader) {
-        elements.globalLoader.style.opacity = '0';
-        setTimeout(() => {
-            elements.globalLoader.style.display = 'none';
-        }, 300);
+        elements.globalLoader.style.display = 'none';
     }
 }
 
 function showStatus(message, type = 'info') {
     if (!elements.statusMessage || !elements.statusBanner) return;
     
-    const icons = {
-        info: '📡',
-        success: '✅',
-        warning: '⚠️',
-        error: '❌'
-    };
+    elements.statusMessage.textContent = message;
     
-    elements.statusMessage.innerHTML = `${icons[type] || ''} ${message}`;
-    
+    // Couleurs selon le type
     const colors = {
         info: '#4361ee',
         success: '#2ecc71',
@@ -1010,25 +895,14 @@ function showStatus(message, type = 'info') {
     
     if (colors[type]) {
         elements.statusBanner.style.borderLeftColor = colors[type];
-        elements.statusBanner.style.background = `${colors[type]}10`;
     }
-    
-    // Animation
-    elements.statusBanner.style.opacity = '0';
-    elements.statusBanner.style.transform = 'translateY(-10px)';
-    
-    setTimeout(() => {
-        elements.statusBanner.style.transition = 'all 0.3s ease';
-        elements.statusBanner.style.opacity = '1';
-        elements.statusBanner.style.transform = 'translateY(0)';
-    }, 10);
 }
 
 function showError(title, message) {
     console.error(title, message);
     showStatus(`❌ ${title}`, 'error');
     
-    if (title.includes('connexion') || title.includes('serveur') || title.includes('indisponible')) {
+    if (title.includes('connexion') || title.includes('serveur')) {
         showErrorSection(title, message);
     }
 }
@@ -1067,12 +941,16 @@ function formatDateTime(date) {
     });
 }
 
-function refreshData() {
-    showLoader('Actualisation des données...');
-    loadSystemStatus()
-        .then(() => showStatus('✅ Données actualisées', 'success'))
-        .catch(() => showStatus('❌ Erreur d\'actualisation', 'error'))
-        .finally(() => hideLoader());
+function updateServerInfo() {
+    if (elements.serverInfo) {
+        elements.serverInfo.textContent = window.location.hostname;
+    }
+}
+
+function updateFooterYear() {
+    if (elements.footerYear) {
+        elements.footerYear.textContent = new Date().getFullYear();
+    }
 }
 
 function logout() {
@@ -1085,7 +963,6 @@ function logout() {
     }
     
     showStatus('👋 Session terminée • Prêt pour la vérification', 'info');
-    playLogoutSound();
 }
 
 function retryAction() {
@@ -1100,88 +977,6 @@ function goToEmailSection() {
     hideAllSections();
     if (elements.emailSection) {
         elements.emailSection.style.display = 'block';
-    }
-}
-
-function scrollToTop() {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function updateServerInfo() {
-    if (elements.serverInfo) {
-        elements.serverInfo.textContent = window.location.hostname;
-    }
-}
-
-function updateFooterYear() {
-    if (elements.footerYear) {
-        elements.footerYear.textContent = new Date().getFullYear();
-    }
-}
-
-async function fetchWithTimeout(url, options = {}) {
-    const { timeout = 10000, ...fetchOptions } = options;
-    
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-    
-    try {
-        const response = await fetch(url, {
-            ...fetchOptions,
-            signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        return response;
-    } catch (error) {
-        clearTimeout(timeoutId);
-        if (error.name === 'AbortError') {
-            throw new Error('Timeout dépassé - Le serveur met trop de temps à répondre');
-        }
-        throw error;
-    }
-}
-
-function playSuccessSound() {
-    try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.frequency.value = 523.25; // Do
-        oscillator.type = 'sine';
-        
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-        
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.5);
-    } catch (error) {
-        // Audio non supporté ou bloqué - silence
-    }
-}
-
-function playLogoutSound() {
-    try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.frequency.value = 392.00; // Sol
-        oscillator.type = 'sine';
-        
-        gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-        
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.3);
-    } catch (error) {
-        // Audio non supporté ou bloqué - silence
     }
 }
 
@@ -1208,14 +1003,6 @@ function setupEventListeners() {
             hideSystemInfoModal();
             hideAccessibilityModal();
         }
-        
-        // Raccourci Ctrl+R pour rafraîchir (avec confirmation)
-        if (e.ctrlKey && e.key === 'r') {
-            e.preventDefault();
-            if (confirm('Actualiser les données du système ?')) {
-                refreshData();
-            }
-        }
     });
     
     // Validation email en temps réel
@@ -1226,36 +1013,39 @@ function setupEventListeners() {
             }
         });
         
-        // Auto-focus sur l'email si la section est visible
+        // Auto-focus sur l'email
         if (elements.emailSection && elements.emailSection.style.display !== 'none') {
             setTimeout(() => {
                 elements.emailInput.focus();
             }, 100);
         }
+        
+        // Entrée pour valider
+        elements.emailInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                verifyEmail();
+            }
+        });
     }
     
-    // Online/Offline detection
+    // Bouton vérifier
+    if (elements.verifyBtn) {
+        elements.verifyBtn.addEventListener('click', verifyEmail);
+    }
+    
+    // Détection connexion
     window.addEventListener('online', () => {
         showStatus('✅ Connexion rétablie', 'success');
-        setTimeout(() => refreshData(), 1000);
     });
     
     window.addEventListener('offline', () => {
-        showStatus('❌ Hors ligne - Reconnexion en cours...', 'error');
-    });
-    
-    // Validation email avec Entrée
-    elements.emailInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            verifyEmail();
-        }
+        showStatus('❌ Hors ligne', 'error');
     });
 }
 
 // ==================== EXPORT GLOBAL ====================
 
 window.verifyEmail = verifyEmail;
-window.handleEmailEnter = handleEmailEnter;
 window.selectCandidate = selectCandidate;
 window.filterCandidates = filterCandidates;
 window.clearSelection = clearSelection;
@@ -1266,21 +1056,11 @@ window.showSystemInfo = showSystemInfo;
 window.hideSystemInfoModal = hideSystemInfoModal;
 window.showAccessibilityInfo = showAccessibilityInfo;
 window.hideAccessibilityModal = hideAccessibilityModal;
-window.refreshData = refreshData;
 window.logout = logout;
 window.retryAction = retryAction;
 window.goToEmailSection = goToEmailSection;
-window.scrollToTop = scrollToTop;
 
 // Message de démarrage
 console.log('=== Système de Vote Scolaire 2026 ===');
-console.log('Établissement: Cours privés Source de la Fontaine');
-console.log('Candidates:');
-console.log('  • Binta Diallo (3ème)');
-console.log('  • Maguette Ngom (6ème)');
-console.log('  • Eléna Nafissatou Gomis (5ème)');
-console.log('  • Diasse Séne (2nde)');
-console.log('  • Ndeye Fatou Ndong (4ème)');
-console.log('Version: 2.0.0');
+console.log('Établissement: Cours la privés Source de la Fontaine');
 console.log('URL:', window.location.origin);
-console.log('Timestamp:', new Date().toLocaleString('fr-FR'));
