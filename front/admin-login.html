@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion Admin - Élections 2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 500px;
+            overflow: hidden;
+        }
+        
+        .login-header {
+            background: linear-gradient(135deg, #4361ee, #3a0ca3);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .login-header i {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+        
+        .login-header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        .login-header p {
+            opacity: 0.9;
+        }
+        
+        .login-form {
+            padding: 40px;
+        }
+        
+        .input-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+        
+        .input-group i {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #4361ee;
+            font-size: 1.2rem;
+        }
+        
+        input[type="password"] {
+            width: 100%;
+            padding: 18px 20px 18px 55px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="password"]:focus {
+            border-color: #4361ee;
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+        }
+        
+        .btn-login {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #4361ee, #3a0ca3);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: all 0.3s;
+        }
+        
+        .btn-login:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(67, 97, 238, 0.3);
+        }
+        
+        .error-message {
+            background: rgba(255, 89, 94, 0.1);
+            border-left: 4px solid #ff595e;
+            color: #ff595e;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .login-footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+            border-top: 1px solid #eee;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #4361ee;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <i class="fas fa-lock"></i>
+            <h1>Portail Administrateur</h1>
+            <p>Élections Délégués 2026 - Cours privés La Source de la Fontaine</p>
+        </div>
+        
+        <div class="login-form">
+            <div class="input-group">
+                <i class="fas fa-key"></i>
+                <input type="password" 
+                       id="adminPassword" 
+                       placeholder="Code d'accès administrateur"
+                       autocomplete="off"
+                       autofocus>
+            </div>
+            
+            <div class="error-message" id="errorMessage">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>Code incorrect</span>
+            </div>
+            
+            <button class="btn-login" onclick="loginAdmin()">
+                <i class="fas fa-sign-in-alt"></i>
+                <span>SE CONNECTER</span>
+            </button>
+            
+            <p style="text-align: center; margin-top: 25px; color: #666; font-size: 0.9rem;">
+                <i class="fas fa-info-circle"></i> Code admin : admin2026
+            </p>
+        </div>
+        
+        <div class="login-footer">
+            <p>Système de vote électronique sécurisé - Version 2.0</p>
+            <a href="/" class="back-link">
+                <i class="fas fa-arrow-left"></i>
+                Retour à l'interface de vote
+            </a>
+        </div>
+    </div>
+    
+    <script>
+        const ADMIN_SECRET = 'admin2026';
+        
+        function loginAdmin() {
+            const password = document.getElementById('adminPassword').value.trim();
+            const errorElement = document.getElementById('errorMessage');
+            
+            if (!password) {
+                showError('Veuillez entrer le code d\'accès');
+                return;
+            }
+            
+            if (password === ADMIN_SECRET) {
+                // Connexion réussie - rediriger vers la page admin complète
+                window.location.href = '/admin-dashboard.html';
+            } else {
+                showError('Code incorrect. Essayez : admin2026');
+            }
+        }
+        
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.querySelector('span').textContent = message;
+            errorElement.style.display = 'flex';
+            
+            // Animation
+            errorElement.style.opacity = '0';
+            errorElement.style.transform = 'translateY(-10px)';
+            
+            setTimeout(() => {
+                errorElement.style.transition = 'all 0.3s ease';
+                errorElement.style.opacity = '1';
+                errorElement.style.transform = 'translateY(0)';
+            }, 10);
+        }
+        
+        // Entrée pour valider
+        document.getElementById('adminPassword').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                loginAdmin();
+            }
+        });
+        
+        // Focus sur le champ mot de passe
+        setTimeout(() => {
+            document.getElementById('adminPassword').focus();
+        }, 100);
+    </script>
+</body>
+</html>

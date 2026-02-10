@@ -1,0 +1,46 @@
+@app.route('/admin-login')
+def admin_login():
+    """Page de connexion admin"""
+    try:
+        return send_from_directory(FRONTEND_PATH, 'admin-login.html')
+    except:
+        return '''
+        <!DOCTYPE html>
+        <html>
+        <head><title>Admin Login</title></head>
+        <body>
+            <h1>Connexion Admin</h1>
+            <form onsubmit="login()">
+                <input type="password" id="password" placeholder="Mot de passe admin">
+                <button>Se connecter</button>
+            </form>
+            <script>
+                function login() {
+                    event.preventDefault();
+                    if(document.getElementById('password').value === 'admin2026') {
+                        window.location.href = '/admin-dashboard.html';
+                    } else {
+                        alert('Mot de passe incorrect');
+                    }
+                }
+            </script>
+        </body>
+        </html>
+        '''
+
+@app.route('/admin-dashboard')
+def admin_dashboard():
+    """Tableau de bord admin"""
+    try:
+        return send_from_directory(FRONTEND_PATH, 'admin-dashboard.html')
+    except:
+        return '''
+        <!DOCTYPE html>
+        <html>
+        <head><title>Admin Dashboard</title></head>
+        <body>
+            <h1>Tableau de bord Admin</h1>
+            <p>Redirigez-vous vers <a href="/admin-login">la page de connexion</a></p>
+        </body>
+        </html>
+        '''
