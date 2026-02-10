@@ -1,256 +1,202 @@
-// Configuration de l'API - VERSION CORRIGÉE
-const API_BASE_URL = window.location.origin; // IMPORTANT: Utilise l'URL actuelle
-const API_ENDPOINTS = {
-    election: `${API_BASE_URL}/api/election`,
-    vote: `${API_BASE_URL}/api/vote`,
-    verify: `${API_BASE_URL}/api/verify-email`,
-    status: `${API_BASE_URL}/api/status`,
-    results: `${API_BASE_URL}/api/results`,
-    stats: `${API_BASE_URL}/api/stats`
-};
+// ==================== CONFIGURATION ====================
+// Utiliser la configuration globale
+const API_BASE_URL = window.APP_CONFIG.apiBaseUrl;
+const API_ENDPOINTS = window.API_ENDPOINTS;
+const IS_DEBUG = window.APP_CONFIG.debug;
 
-// Variables globales
-let currentElection = null;
-let candidates = [];
-let selectedCandidate = null;
-let userEmail = null;
-let hasVoted = false;
-let electionStatus = '';
-let selectedCandidateId = null;
+console.log('🚀 Script principal chargé');
+console.log(`🔗 API Base: ${API_BASE_URL}`);
 
-// Éléments DOM
+// ==================== ÉLÉMENTS DOM ====================
 const elements = {
-    // En-tête et statut
-    statusBanner: document.getElementById('statusBanner'),
-    statusMessage: document.getElementById('statusMessage'),
-    timeRemaining: document.getElementById('timeRemaining'),
-    votesCount: document.getElementById('votesCount'),
-    participationRate: document.getElementById('participationRate'),
-    
     // Sections principales
     emailSection: document.getElementById('emailSection'),
     candidatesSection: document.getElementById('candidatesSection'),
-    alreadyVotedSection: document.getElementById('alreadyVotedSection'),
     confirmationSection: document.getElementById('confirmationSection'),
+    alreadyVotedSection: document.getElementById('alreadyVotedSection'),
     errorSection: document.getElementById('errorSection'),
     
-    // Formulaire email
+    // Email
     emailInput: document.getElementById('emailInput'),
     verifyBtn: document.getElementById('verifyBtn'),
     emailError: document.getElementById('emailError'),
     
-    // Section candidates
+    // Candidates
     candidatesGrid: document.getElementById('candidatesGrid'),
     selectedCandidatePanel: document.getElementById('selectedCandidate'),
     selectedInfo: document.getElementById('selectedInfo'),
     voteBtn: document.getElementById('voteBtn'),
     loadingCandidates: document.getElementById('loadingCandidates'),
     
-    // Filtres
-    filterButtons: document.querySelectorAll('.filter-btn'),
-    
-    // Sections déjà voté / confirmation
-    voteTimestamp: document.getElementById('voteTimestamp'),
+    // Confirmation
     confirmationId: document.getElementById('confirmationId'),
     confirmationEmail: document.getElementById('confirmationEmail'),
     confirmationTime: document.getElementById('confirmationTime'),
+    voteTimestamp: document.getElementById('voteTimestamp'),
     
     // Modals
     confirmationModal: document.getElementById('confirmationModal'),
     confirmCandidate: document.getElementById('confirmCandidate'),
     confirmVoteBtn: document.getElementById('confirmVoteBtn'),
-    systemInfoModal: document.getElementById('systemInfoModal'),
-    accessibilityModal: document.getElementById('accessibilityModal'),
+    
+    // Status
+    statusMessage: document.getElementById('statusMessage'),
+    timeRemaining: document.getElementById('timeRemaining'),
+    votesCount: document.getElementById('votesCount'),
+    participationRate: document.getElementById('participationRate'),
     
     // Loader
     globalLoader: document.getElementById('globalLoader'),
-    loaderMessage: document.getElementById('loaderMessage'),
-    
-    // Erreurs
-    errorTitle: document.getElementById('errorTitle'),
-    errorMessage: document.getElementById('errorMessage'),
-    
-    // Pied de page
-    serverInfo: document.getElementById('serverInfo'),
-    footerYear: document.getElementById('footerYear')
+    loaderMessage: document.getElementById('loaderMessage')
+};
+
+// ==================== ÉTAT GLOBAL ====================
+let state = {
+    userEmail: null,
+    selectedCandidateId: null,
+    selectedCandidate: null,
+    candidates: [],
+    hasVoted: false,
+    electionStatus: '',
+    currentElection: null
 };
 
 // ==================== INITIALISATION ====================
-
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 Initialisation du système de vote...');
-    console.log('🌐 URL API:', API_BASE_URL);
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('📱 Page chargée, initialisation...');
     
-    // Initialisation de base
-    updateFooterYear();
-    updateServerInfo();
+    // Tester la connexion
+    const connection = await window.CONFIG.testConnection();
     
-    // Vérifier la connexion et charger les données
-    initializeApp();
+    if (!connection.success) {
+        showError('Connexion impossible', 'Le serveur ne répond pas. Réessayez plus tard.');
+        return;
+    }
     
-    // Configurer les événements
+    // Vérifier vote précédent
+    checkPreviousVote();
+    
+    // Charger statut système
+    await loadSystemStatus();
+    
+    // Configurer événements
     setupEventListeners();
+    
+    console.log('✅ Système prêt');
+    showStatus('✅ Système connecté • Prêt pour le vote', 'success');
 });
 
-async function initializeApp() {
-    try {
-        showLoader('Connexion au système...');
-        
-        // Vérifier la connexion API
-        const isConnected = await checkAPI();
-        if (!isConnected) {
-            throw new Error('Impossible de se connecter au serveur');
-        }
-        
-        // Charger les données du système
-        await loadSystemStatus();
-        
-        // Vérifier si l'utilisateur a déjà voté
-        checkPreviousVote();
-        
-        // Afficher le statut initial
-        showStatus('✅ Système de vote prêt • Cours privés Source de la Fontaine', 'success');
-        
-    } catch (error) {
-        console.error('Erreur d\'initialisation:', error);
-        showError('Système temporairement indisponible', 'Veuillez réessayer dans quelques instants');
-    } finally {
-        hideLoader();
-    }
-}
-
-// ==================== FONCTIONS API ====================
-
-async function checkAPI() {
-    try {
-        console.log('🔗 Test connexion API...');
-        const response = await fetch(API_ENDPOINTS.status, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json'
-            }
+// ==================== FONCTIONS UTILITAIRES ====================
+function showSection(sectionId) {
+    // Cacher toutes les sections
+    ['emailSection', 'candidatesSection', 'confirmationSection', 'alreadyVotedSection', 'errorSection']
+        .forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
         });
-        
-        if (!response.ok) {
-            throw new Error(`Serveur indisponible (${response.status})`);
-        }
-        
-        const data = await response.json();
-        
-        if (data.system && data.system.status !== 'online') {
-            throw new Error('Serveur en erreur');
-        }
-        
-        console.log('✅ API connectée:', data.system);
-        return true;
-        
-    } catch (error) {
-        console.error('❌ Erreur connexion API:', error);
-        return false;
+    
+    // Afficher la section demandée
+    const section = document.getElementById(sectionId);
+    if (section) {
+        section.style.display = 'block';
+        if (IS_DEBUG) console.log(`📱 Affichage section: ${sectionId}`);
     }
 }
 
-async function loadSystemStatus() {
-    try {
-        const response = await fetch(API_ENDPOINTS.status);
-        if (!response.ok) {
-            throw new Error(`Erreur HTTP: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        if (data.error) {
-            throw new Error(data.error);
-        }
-        
-        currentElection = data.election;
-        electionStatus = data.election ? data.election.status : 'inactive';
-        
-        updateSystemDisplay(data);
-        return data;
-        
-    } catch (error) {
-        console.error('Erreur chargement statut:', error);
-        throw error;
+function showLoader(message = 'Chargement...') {
+    if (elements.globalLoader && elements.loaderMessage) {
+        elements.loaderMessage.textContent = message;
+        elements.globalLoader.style.display = 'flex';
     }
 }
 
-function updateSystemDisplay(data) {
-    // Mettre à jour le temps restant
-    if (elements.timeRemaining && data.election && data.election.temps_restant) {
-        elements.timeRemaining.textContent = data.election.temps_restant;
-    }
-    
-    // Mettre à jour les statistiques
-    if (data.statistics) {
-        if (elements.votesCount) {
-            elements.votesCount.textContent = data.statistics.votes || 0;
-        }
-        if (elements.participationRate) {
-            elements.participationRate.textContent = `${data.statistics.participation_rate || 0}%`;
-        }
-    }
-    
-    // Mettre à jour le message de statut
-    if (data.election) {
-        updateStatusMessage(data.election);
+function hideLoader() {
+    if (elements.globalLoader) {
+        elements.globalLoader.style.display = 'none';
     }
 }
 
-function updateStatusMessage(election) {
-    if (!elements.statusMessage) return;
-    
-    let statusText = '';
-    let statusType = 'info';
-    
-    switch (election.status) {
-        case 'active':
-            statusText = `🗳️ Vote en cours • ${election.temps_restant || ''} restant`;
-            statusType = 'success';
-            break;
-        case 'pending':
-            statusText = '⏳ L\'élection débutera prochainement';
-            statusType = 'warning';
-            break;
-        case 'finished':
-            statusText = '✅ Élection terminée';
-            statusType = 'info';
-            break;
-        default:
-            statusText = '📡 Connexion établie au système';
-            statusType = 'info';
+function showStatus(message, type = 'info') {
+    if (elements.statusMessage) {
+        elements.statusMessage.textContent = message;
+        
+        // Couleur selon type
+        const colors = {
+            info: '#4361ee',
+            success: '#2ecc71',
+            warning: '#f39c12',
+            error: '#e74c3c'
+        };
+        
+        if (elements.statusBanner && colors[type]) {
+            elements.statusBanner.style.borderLeftColor = colors[type];
+        }
     }
-    
-    showStatus(statusText, statusType);
 }
 
-// ==================== GESTION DES ÉTATS UTILISATEUR ====================
+function showError(title, message) {
+    console.error(`❌ ${title}: ${message}`);
+    showStatus(`❌ ${title}`, 'error');
+    
+    if (elements.errorSection) {
+        document.getElementById('errorTitle').textContent = title;
+        document.getElementById('errorMessage').textContent = message;
+        showSection('errorSection');
+    }
+}
 
+function validateEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+}
+
+function formatDateTime(date) {
+    if (!date) return '--';
+    return new Date(date).toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+// ==================== GESTION ÉTAT UTILISATEUR ====================
 function checkPreviousVote() {
     const savedEmail = localStorage.getItem('vote_email_2026');
     const savedHasVoted = localStorage.getItem('has_voted_2026');
-    const savedTimestamp = localStorage.getItem('vote_timestamp_2026');
     
     if (savedEmail && savedHasVoted === 'true') {
-        userEmail = savedEmail;
-        hasVoted = true;
+        state.userEmail = savedEmail;
+        state.hasVoted = true;
         
-        // Afficher la section "déjà voté"
-        showAlreadyVotedSection();
-        
-        // Mettre à jour la date du vote
-        if (elements.voteTimestamp && savedTimestamp) {
-            const date = new Date(savedTimestamp);
-            elements.voteTimestamp.textContent = `Vote enregistré le ${formatDateTime(date)}`;
+        if (elements.voteTimestamp) {
+            const savedTimestamp = localStorage.getItem('vote_timestamp_2026');
+            elements.voteTimestamp.textContent = savedTimestamp 
+                ? `Vote enregistré le ${formatDateTime(savedTimestamp)}`
+                : 'Vous avez déjà voté';
         }
+        
+        showSection('alreadyVotedSection');
+        showStatus('✅ Vous avez déjà voté', 'info');
+        return true;
     }
+    
+    return false;
+}
+
+function saveVoteState(email, timestamp = null) {
+    localStorage.setItem('vote_email_2026', email);
+    localStorage.setItem('has_voted_2026', 'true');
+    localStorage.setItem('vote_timestamp_2026', timestamp || new Date().toISOString());
+    state.hasVoted = true;
 }
 
 function clearUserSession() {
-    userEmail = null;
-    hasVoted = false;
-    selectedCandidateId = null;
-    selectedCandidate = null;
+    state.userEmail = null;
+    state.selectedCandidateId = null;
+    state.selectedCandidate = null;
+    state.hasVoted = false;
     
     localStorage.removeItem('vote_email_2026');
     localStorage.removeItem('has_voted_2026');
@@ -260,28 +206,58 @@ function clearUserSession() {
     if (elements.emailInput) {
         elements.emailInput.value = '';
     }
+    
+    showSection('emailSection');
+    showStatus('👋 Session réinitialisée', 'info');
 }
 
-// ==================== GESTION EMAIL ====================
+// ==================== FONCTIONS API ====================
+async function loadSystemStatus() {
+    try {
+        const response = await fetch(API_ENDPOINTS.status);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const data = await response.json();
+        state.currentElection = data.election;
+        state.electionStatus = data.election?.status || 'inactive';
+        
+        // Mettre à jour l'affichage
+        if (elements.timeRemaining && data.election?.temps_restant) {
+            elements.timeRemaining.textContent = data.election.temps_restant;
+        }
+        
+        if (elements.votesCount && data.statistics?.votes !== undefined) {
+            elements.votesCount.textContent = data.statistics.votes;
+        }
+        
+        if (elements.participationRate && data.statistics?.participation_rate !== undefined) {
+            elements.participationRate.textContent = `${data.statistics.participation_rate}%`;
+        }
+        
+        return data;
+        
+    } catch (error) {
+        console.error('Erreur chargement statut:', error);
+        throw error;
+    }
+}
 
+// ==================== VÉRIFICATION EMAIL ====================
 async function verifyEmail() {
-    const email = elements.emailInput.value.trim().toLowerCase();
+    const email = elements.emailInput?.value.trim().toLowerCase();
     
-    console.log('📧 Vérification email:', email);
-    
-    // Validation basique
     if (!email) {
         showEmailError('Veuillez entrer votre email');
         return;
     }
     
     if (!validateEmail(email)) {
-        showEmailError('Format d\'email invalide (exemple: nom@ecole.fr)');
+        showEmailError('Format d\'email invalide (ex: nom@lasourcedelafontaine.fr)');
         return;
     }
     
-    userEmail = email;
     showLoader('Vérification en cours...');
+    state.userEmail = email;
     
     try {
         const response = await fetch(API_ENDPOINTS.verify, {
@@ -293,43 +269,37 @@ async function verifyEmail() {
             body: JSON.stringify({ email: email })
         });
         
-        console.log('📤 Réponse vérification:', response.status);
-        
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.error || `Erreur serveur: ${response.status}`);
         }
         
         const data = await response.json();
-        console.log('📥 Données reçues:', data);
         
         if (data.error) {
             showEmailError(data.error);
             return;
         }
         
-        hasVoted = data.has_voted;
+        state.hasVoted = data.has_voted;
         
-        if (hasVoted) {
-            console.log('✅ Déjà voté');
+        if (state.hasVoted) {
             saveVoteState(email, data.vote_date);
-            showAlreadyVotedSection();
+            showSection('alreadyVotedSection');
             showStatus('✅ Vous avez déjà voté', 'info');
         } else {
             if (data.can_vote) {
-                console.log('✅ Peut voter');
                 await loadCandidates();
-                showCandidatesSection();
+                showSection('candidatesSection');
                 showStatus('✅ Email validé • Sélectionnez une candidate', 'success');
             } else {
-                console.log('❌ Ne peut pas voter');
                 showEmailError(data.message || 'La période de vote n\'est pas active');
                 showStatus('⏸️ Vote non disponible', 'warning');
             }
         }
         
     } catch (error) {
-        console.error('💥 Erreur vérification:', error);
+        console.error('Erreur vérification:', error);
         showEmailError('Erreur de connexion: ' + error.message);
         showStatus('❌ Erreur de vérification', 'error');
     } finally {
@@ -337,54 +307,33 @@ async function verifyEmail() {
     }
 }
 
-function saveVoteState(email, voteDate = null) {
-    localStorage.setItem('vote_email_2026', email);
-    localStorage.setItem('has_voted_2026', 'true');
-    localStorage.setItem('vote_timestamp_2026', voteDate || new Date().toISOString());
-}
-
 function showEmailError(message) {
     if (elements.emailError) {
         elements.emailError.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
         elements.emailError.style.display = 'block';
-        
-        // Animation
-        elements.emailError.style.opacity = '0';
-        elements.emailError.style.transform = 'translateY(-10px)';
-        
-        setTimeout(() => {
-            elements.emailError.style.transition = 'all 0.3s ease';
-            elements.emailError.style.opacity = '1';
-            elements.emailError.style.transform = 'translateY(0)';
-        }, 10);
     }
 }
 
 // ==================== GESTION CANDIDATES ====================
-
 async function loadCandidates() {
     try {
         showLoader('Chargement des candidates...');
         
         const response = await fetch(API_ENDPOINTS.election);
-        if (!response.ok) {
-            throw new Error(`Erreur: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Erreur: ${response.status}`);
         
         const data = await response.json();
         
-        if (data.error) {
-            throw new Error(data.error);
-        }
+        if (data.error) throw new Error(data.error);
         
-        candidates = data.candidates || [];
-        currentElection = data;
+        state.candidates = data.candidates || [];
+        state.currentElection = data;
         
-        if (candidates.length === 0) {
+        if (state.candidates.length === 0) {
             throw new Error('Aucune candidate disponible');
         }
         
-        displayCandidates(candidates);
+        displayCandidates(state.candidates);
         
     } catch (error) {
         console.error('Erreur chargement candidates:', error);
@@ -403,11 +352,9 @@ function displayCandidates(candidatesList) {
         elements.loadingCandidates.style.display = 'none';
     }
     
-    // Trier par classe (ordre logique)
+    // Trier par classe
     const classOrder = ['2nde', '3ème', '4ème', '5ème', '6ème'];
-    candidatesList.sort((a, b) => {
-        return classOrder.indexOf(a.classe) - classOrder.indexOf(b.classe);
-    });
+    candidatesList.sort((a, b) => classOrder.indexOf(a.classe) - classOrder.indexOf(b.classe));
     
     candidatesList.forEach(candidate => {
         const card = createCandidateCard(candidate);
@@ -420,19 +367,25 @@ function createCandidateCard(candidate) {
     card.className = 'candidate-card';
     card.dataset.id = candidate.id;
     card.dataset.classe = candidate.classe;
-    card.setAttribute('aria-label', `Candidate: ${candidate.prenom} ${candidate.nom}, Classe: ${candidate.classe}`);
-    card.setAttribute('tabindex', '0');
     
-    // Initiales pour l'avatar
-    const initials = getInitials(candidate.prenom, candidate.nom);
+    // Initiales
+    const initials = (candidate.prenom?.charAt(0) || '') + (candidate.nom?.charAt(0) || '');
     
-    // Couleur basée sur la classe
-    const color = getColorByClass(candidate.classe);
+    // Couleur par classe
+    const colors = {
+        '2nde': 'linear-gradient(135deg, #4361ee, #3a0ca3)',
+        '3ème': 'linear-gradient(135deg, #4cc9f0, #3a86ff)',
+        '4ème': 'linear-gradient(135deg, #7209b7, #560bad)',
+        '5ème': 'linear-gradient(135deg, #f72585, #b5179e)',
+        '6ème': 'linear-gradient(135deg, #2ecc71, #27ae60)'
+    };
+    
+    const color = colors[candidate.classe] || 'linear-gradient(135deg, #6c757d, #495057)';
     
     card.innerHTML = `
         <div class="candidate-header">
             <div class="candidate-photo" style="background: ${color}">
-                ${initials}
+                ${initials.toUpperCase()}
             </div>
             <div class="candidate-info">
                 <h3>${candidate.prenom} ${candidate.nom}</h3>
@@ -445,24 +398,15 @@ function createCandidateCard(candidate) {
             ${candidate.description || `<em>Candidate pour la classe de ${candidate.classe}</em>`}
         </div>
         <div class="candidate-select">
-            <button type="button" class="select-btn" onclick="selectCandidate(${candidate.id})" 
-                    aria-label="Sélectionner ${candidate.prenom} ${candidate.nom}">
+            <button type="button" class="select-btn" onclick="selectCandidate(${candidate.id})">
                 <i class="fas fa-check-circle"></i> Sélectionner
             </button>
         </div>
     `;
     
-    // Interaction tactile/click
+    // Clic sur la carte
     card.addEventListener('click', (e) => {
         if (!e.target.closest('.select-btn')) {
-            selectCandidate(candidate.id);
-        }
-    });
-    
-    // Support clavier
-    card.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
             selectCandidate(candidate.id);
         }
     });
@@ -471,7 +415,7 @@ function createCandidateCard(candidate) {
 }
 
 function selectCandidate(candidateId) {
-    if (!userEmail) {
+    if (!state.userEmail) {
         showError('Validation requise', 'Veuillez d\'abord vérifier votre email');
         return;
     }
@@ -479,47 +423,52 @@ function selectCandidate(candidateId) {
     // Désélectionner précédent
     document.querySelectorAll('.candidate-card').forEach(card => {
         card.classList.remove('selected');
-        card.setAttribute('aria-selected', 'false');
     });
     
     // Sélectionner nouveau
     const selectedCard = document.querySelector(`.candidate-card[data-id="${candidateId}"]`);
     if (selectedCard) {
         selectedCard.classList.add('selected');
-        selectedCard.setAttribute('aria-selected', 'true');
     }
     
-    selectedCandidateId = candidateId;
-    selectedCandidate = candidates.find(c => c.id === candidateId);
+    state.selectedCandidateId = candidateId;
+    state.selectedCandidate = state.candidates.find(c => c.id === candidateId);
     
-    if (selectedCandidate && elements.selectedInfo) {
-        const initials = getInitials(selectedCandidate.prenom, selectedCandidate.nom);
-        const color = getColorByClass(selectedCandidate.classe);
+    if (state.selectedCandidate && elements.selectedInfo) {
+        const initials = (state.selectedCandidate.prenom?.charAt(0) || '') + (state.selectedCandidate.nom?.charAt(0) || '');
+        const colors = {
+            '2nde': 'linear-gradient(135deg, #4361ee, #3a0ca3)',
+            '3ème': 'linear-gradient(135deg, #4cc9f0, #3a86ff)',
+            // ... mêmes couleurs
+        };
+        const color = colors[state.selectedCandidate.classe] || 'linear-gradient(135deg, #6c757d, #495057)';
         
         elements.selectedInfo.innerHTML = `
             <div class="candidate-header">
                 <div class="candidate-photo" style="background: ${color}">
-                    ${initials}
+                    ${initials.toUpperCase()}
                 </div>
                 <div class="candidate-info">
-                    <h3>${selectedCandidate.prenom} ${selectedCandidate.nom}</h3>
+                    <h3>${state.selectedCandidate.prenom} ${state.selectedCandidate.nom}</h3>
                     <div class="candidate-class">
-                        <i class="fas fa-graduation-cap"></i> ${selectedCandidate.classe}
+                        <i class="fas fa-graduation-cap"></i> ${state.selectedCandidate.classe}
                     </div>
                 </div>
             </div>
             <div class="candidate-description">
-                ${selectedCandidate.description || `<em>Votre sélection pour la classe de ${selectedCandidate.classe}</em>`}
+                ${state.selectedCandidate.description || `<em>Votre sélection pour la classe de ${state.selectedCandidate.classe}</em>`}
             </div>
             <div class="selection-confirmation">
                 <i class="fas fa-check-circle"></i> Prête à voter pour cette candidate
             </div>
         `;
         
-        // Afficher le panneau
-        elements.selectedCandidatePanel.style.display = 'block';
+        // Afficher panneau
+        if (elements.selectedCandidatePanel) {
+            elements.selectedCandidatePanel.style.display = 'block';
+        }
         
-        // Activer le bouton de vote
+        // Activer bouton vote
         if (elements.voteBtn) {
             elements.voteBtn.disabled = false;
             elements.voteBtn.classList.add('active');
@@ -529,113 +478,48 @@ function selectCandidate(candidateId) {
     }
 }
 
-function filterCandidates(classe) {
-    // Mettre à jour les boutons de filtre
-    elements.filterButtons.forEach(btn => {
-        btn.classList.remove('active');
-        btn.setAttribute('aria-pressed', 'false');
-    });
-    
-    const activeBtn = Array.from(elements.filterButtons).find(btn => {
-        if (classe === 'all') return btn.textContent.includes('Toutes');
-        return btn.textContent.includes(classe);
-    });
-    
-    if (activeBtn) {
-        activeBtn.classList.add('active');
-        activeBtn.setAttribute('aria-pressed', 'true');
-    }
-    
-    // Filtrer et afficher
-    let filtered = [];
-    if (classe === 'all') {
-        filtered = candidates;
-    } else {
-        filtered = candidates.filter(c => c.classe === classe);
-    }
-    
-    displayCandidates(filtered);
-}
-
-function clearSelection() {
-    selectedCandidateId = null;
-    selectedCandidate = null;
-    
-    document.querySelectorAll('.candidate-card').forEach(card => {
-        card.classList.remove('selected');
-        card.setAttribute('aria-selected', 'false');
-    });
-    
-    elements.selectedCandidatePanel.style.display = 'none';
-    
-    if (elements.voteBtn) {
-        elements.voteBtn.disabled = true;
-        elements.voteBtn.classList.remove('active');
-    }
-}
-
 // ==================== GESTION VOTE ====================
-
 function showConfirmationModal() {
-    if (!selectedCandidate || !userEmail) {
+    if (!state.selectedCandidate || !state.userEmail) {
         showError('Sélection incomplète', 'Veuillez sélectionner une candidate');
         return;
     }
     
-    const initials = getInitials(selectedCandidate.prenom, selectedCandidate.nom);
-    const color = getColorByClass(selectedCandidate.classe);
+    if (elements.confirmCandidate) {
+        const initials = (state.selectedCandidate.prenom?.charAt(0) || '') + (state.selectedCandidate.nom?.charAt(0) || '');
+        const colors = {
+            '2nde': 'linear-gradient(135deg, #4361ee, #3a0ca3)',
+            // ... mêmes couleurs
+        };
+        const color = colors[state.selectedCandidate.classe] || 'linear-gradient(135deg, #6c757d, #495057)';
+        
+        elements.confirmCandidate.innerHTML = `
+            <div style="text-align: center; margin-bottom: 20px;">
+                <div style="width: 80px; height: 80px; border-radius: 50%; background: ${color}; 
+                          display: flex; align-items: center; justify-content: center; 
+                          color: white; font-size: 24px; font-weight: bold; margin: 0 auto 15px;">
+                    ${initials.toUpperCase()}
+                </div>
+                <h3 style="margin: 0; color: #333;">${state.selectedCandidate.prenom} ${state.selectedCandidate.nom}</h3>
+                <p style="color: #666; margin: 5px 0;">${state.selectedCandidate.classe}</p>
+            </div>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                <p style="margin: 5px 0;"><strong>Email :</strong> ${state.userEmail}</p>
+                <p style="margin: 5px 0;"><strong>Date :</strong> ${formatDateTime(new Date())}</p>
+            </div>
+        `;
+    }
     
-    elements.confirmCandidate.innerHTML = `
-        <div class="confirmation-header">
-            <h3><i class="fas fa-shield-alt"></i> Confirmation de vote</h3>
-            <p>Veuillez vérifier vos informations avant de confirmer</p>
-        </div>
-        <div class="candidate-header">
-            <div class="candidate-photo" style="background: ${color}">
-                ${initials}
-            </div>
-            <div class="candidate-info">
-                <h3>${selectedCandidate.prenom} ${selectedCandidate.nom}</h3>
-                <div class="candidate-class">
-                    <i class="fas fa-graduation-cap"></i> ${selectedCandidate.classe}
-                </div>
-            </div>
-        </div>
-        <div class="confirmation-details">
-            <div class="detail-item">
-                <i class="fas fa-envelope"></i>
-                <div>
-                    <strong>Email vérifié :</strong>
-                    <span>${userEmail}</span>
-                </div>
-            </div>
-            <div class="detail-item">
-                <i class="fas fa-calendar-check"></i>
-                <div>
-                    <strong>Date et heure :</strong>
-                    <span>${formatDateTime(new Date())}</span>
-                </div>
-            </div>
-            <div class="detail-item">
-                <i class="fas fa-user-check"></i>
-                <div>
-                    <strong>Votre choix :</strong>
-                    <span>${selectedCandidate.prenom} ${selectedCandidate.nom}</span>
-                </div>
-            </div>
-        </div>
-        <div class="confirmation-warning">
-            <i class="fas fa-exclamation-triangle"></i>
-            <p><strong>Attention :</strong> Ce vote est définitif et ne peut pas être modifié.</p>
-        </div>
-    `;
-    
-    // Afficher la modal
-    elements.confirmationModal.style.display = 'flex';
+    if (elements.confirmationModal) {
+        elements.confirmationModal.style.display = 'flex';
+    }
 }
 
 async function submitVote() {
-    if (!selectedCandidateId || !userEmail) return;
+    if (!state.selectedCandidateId || !state.userEmail) {
+        showError('Données manquantes', 'Impossible de voter');
+        return;
+    }
     
     hideModal();
     showLoader('Enregistrement de votre vote...');
@@ -648,8 +532,8 @@ async function submitVote() {
                 'Accept': 'application/json'
             },
             body: JSON.stringify({
-                professeur_email: userEmail,
-                candidate_id: selectedCandidateId
+                professeur_email: state.userEmail,
+                candidate_id: state.selectedCandidateId
             })
         });
         
@@ -660,30 +544,26 @@ async function submitVote() {
         }
         
         // Succès
-        hasVoted = true;
-        saveVoteState(userEmail, data.timestamp);
-        localStorage.setItem('vote_candidate_id_2026', selectedCandidateId.toString());
+        saveVoteState(state.userEmail, data.timestamp);
         
-        // Afficher les détails de confirmation
+        // Afficher confirmation
         if (elements.confirmationId) {
             elements.confirmationId.textContent = data.confirmation_id || `VOTE-${Date.now()}`;
         }
         
         if (elements.confirmationEmail) {
-            elements.confirmationEmail.textContent = userEmail;
+            elements.confirmationEmail.textContent = state.userEmail;
         }
         
         if (elements.confirmationTime) {
             elements.confirmationTime.textContent = formatDateTime(new Date());
         }
         
-        showConfirmationSection();
+        showSection('confirmationSection');
         showStatus('✅ Vote enregistré avec succès !', 'success');
         
-        // Recharger les stats après un délai
-        setTimeout(() => {
-            loadSystemStatus().catch(console.error);
-        }, 3000);
+        // Recharger stats
+        setTimeout(() => loadSystemStatus().catch(console.error), 2000);
         
     } catch (error) {
         console.error('Erreur vote:', error);
@@ -691,15 +571,15 @@ async function submitVote() {
         let errorMessage = 'Erreur d\'enregistrement';
         if (error.message.includes('déjà voté')) {
             errorMessage = 'Vous avez déjà voté pour cette élection';
-            hasVoted = true;
-            saveVoteState(userEmail);
-            showAlreadyVotedSection();
+            state.hasVoted = true;
+            saveVoteState(state.userEmail);
+            showSection('alreadyVotedSection');
         } else if (error.message.includes('terminée')) {
             errorMessage = 'La période de vote est terminée';
-            electionStatus = 'finished';
+            state.electionStatus = 'finished';
         } else if (error.message.includes('pas encore commencé')) {
             errorMessage = 'L\'élection n\'a pas encore commencé';
-            electionStatus = 'pending';
+            state.electionStatus = 'pending';
         }
         
         showError('Vote impossible', errorMessage);
@@ -708,304 +588,15 @@ async function submitVote() {
     }
 }
 
-// ==================== GESTION AFFICHAGE ====================
-
-function showCandidatesSection() {
-    hideAllSections();
-    elements.candidatesSection.style.display = 'block';
-}
-
-function showAlreadyVotedSection() {
-    hideAllSections();
-    elements.alreadyVotedSection.style.display = 'block';
-    
-    // Récupérer la date du vote
-    const savedTimestamp = localStorage.getItem('vote_timestamp_2026');
-    if (elements.voteTimestamp && savedTimestamp) {
-        const date = new Date(savedTimestamp);
-        elements.voteTimestamp.textContent = formatDateTime(date);
-    }
-}
-
-function showConfirmationSection() {
-    hideAllSections();
-    elements.confirmationSection.style.display = 'block';
-}
-
-function showErrorSection(title, message) {
-    hideAllSections();
-    
-    if (elements.errorTitle) elements.errorTitle.textContent = title;
-    if (elements.errorMessage) elements.errorMessage.textContent = message;
-    
-    elements.errorSection.style.display = 'block';
-}
-
-function hideAllSections() {
-    const sections = [
-        elements.emailSection,
-        elements.candidatesSection,
-        elements.alreadyVotedSection,
-        elements.confirmationSection,
-        elements.errorSection
-    ];
-    
-    sections.forEach(section => {
-        if (section) {
-            section.style.display = 'none';
-        }
-    });
-}
-
-// ==================== GESTION MODALS ====================
-
 function hideModal() {
     if (elements.confirmationModal) {
         elements.confirmationModal.style.display = 'none';
     }
 }
 
-function showSystemInfo() {
-    if (elements.systemInfoModal) {
-        loadSystemInfo();
-        elements.systemInfoModal.style.display = 'flex';
-    }
-}
-
-async function loadSystemInfo() {
-    try {
-        const response = await fetch(API_ENDPOINTS.status);
-        const data = await response.json();
-        
-        const infoContent = document.getElementById('systemInfoContent');
-        if (infoContent) {
-            infoContent.innerHTML = `
-                <div class="info-grid">
-                    <div class="info-item">
-                        <i class="fas fa-server"></i>
-                        <div>
-                            <strong>Statut serveur :</strong>
-                            <span>${data.system?.status === 'online' ? '✅ En ligne' : '❌ Hors ligne'}</span>
-                        </div>
-                    </div>
-                    <div class="info-item">
-                        <i class="fas fa-database"></i>
-                        <div>
-                            <strong>Base de données :</strong>
-                            <span>${data.system?.database || 'SQLite'}</span>
-                        </div>
-                    </div>
-                    <div class="info-item">
-                        <i class="fas fa-calendar-alt"></i>
-                        <div>
-                            <strong>Année scolaire :</strong>
-                            <span>${data.system?.year || '2026'}</span>
-                        </div>
-                    </div>
-                    <div class="info-item">
-                        <i class="fas fa-school"></i>
-                        <div>
-                            <strong>Établissement :</strong>
-                            <span>${data.system?.ecole || 'Cours privés Source de la Fontaine'}</span>
-                        </div>
-                    </div>
-                    <div class="info-item">
-                        <i class="fas fa-users"></i>
-                        <div>
-                            <strong>Candidates :</strong>
-                            <span>${data.statistics?.candidates || '0'}</span>
-                        </div>
-                    </div>
-                    <div class="info-item">
-                        <i class="fas fa-vote-yea"></i>
-                        <div>
-                            <strong>Votes enregistrés :</strong>
-                            <span>${data.statistics?.votes || '0'}</span>
-                        </div>
-                    </div>
-                    <div class="info-item">
-                        <i class="fas fa-chart-line"></i>
-                        <div>
-                            <strong>Participation :</strong>
-                            <span>${data.statistics?.participation_rate || '0'}%</span>
-                        </div>
-                    </div>
-                    <div class="info-item">
-                        <i class="fas fa-clock"></i>
-                        <div>
-                            <strong>Dernière mise à jour :</strong>
-                            <span>${new Date(data.system?.timestamp).toLocaleTimeString('fr-FR')}</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-    } catch (error) {
-        console.error('Erreur chargement info:', error);
-    }
-}
-
-function hideSystemInfoModal() {
-    if (elements.systemInfoModal) {
-        elements.systemInfoModal.style.display = 'none';
-    }
-}
-
-function showAccessibilityInfo() {
-    if (elements.accessibilityModal) {
-        elements.accessibilityModal.style.display = 'flex';
-    }
-}
-
-function hideAccessibilityModal() {
-    if (elements.accessibilityModal) {
-        elements.accessibilityModal.style.display = 'none';
-    }
-}
-
-// ==================== FONCTIONS UTILITAIRES ====================
-
-function showLoader(message = 'Chargement...') {
-    if (elements.loaderMessage) {
-        elements.loaderMessage.textContent = message;
-    }
-    if (elements.globalLoader) {
-        elements.globalLoader.style.display = 'flex';
-    }
-}
-
-function hideLoader() {
-    if (elements.globalLoader) {
-        elements.globalLoader.style.display = 'none';
-    }
-}
-
-function showStatus(message, type = 'info') {
-    if (!elements.statusMessage || !elements.statusBanner) return;
-    
-    elements.statusMessage.textContent = message;
-    
-    // Couleurs selon le type
-    const colors = {
-        info: '#4361ee',
-        success: '#2ecc71',
-        warning: '#f39c12',
-        error: '#e74c3c'
-    };
-    
-    if (colors[type]) {
-        elements.statusBanner.style.borderLeftColor = colors[type];
-    }
-}
-
-function showError(title, message) {
-    console.error(title, message);
-    showStatus(`❌ ${title}`, 'error');
-    
-    if (title.includes('connexion') || title.includes('serveur')) {
-        showErrorSection(title, message);
-    }
-}
-
-function validateEmail(email) {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
-}
-
-function getInitials(firstName, lastName) {
-    if (!firstName || !lastName) return '??';
-    return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
-}
-
-function getColorByClass(classe) {
-    const colorMap = {
-        '2nde': 'linear-gradient(135deg, #4361ee, #3a0ca3)',
-        '3ème': 'linear-gradient(135deg, #4cc9f0, #3a86ff)',
-        '4ème': 'linear-gradient(135deg, #7209b7, #560bad)',
-        '5ème': 'linear-gradient(135deg, #f72585, #b5179e)',
-        '6ème': 'linear-gradient(135deg, #2ecc71, #27ae60)'
-    };
-    
-    return colorMap[classe] || 'linear-gradient(135deg, #6c757d, #495057)';
-}
-
-function formatDateTime(date) {
-    if (!date || isNaN(new Date(date))) return '--';
-    
-    return new Date(date).toLocaleDateString('fr-FR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
-
-function updateServerInfo() {
-    if (elements.serverInfo) {
-        elements.serverInfo.textContent = window.location.hostname;
-    }
-}
-
-function updateFooterYear() {
-    if (elements.footerYear) {
-        elements.footerYear.textContent = new Date().getFullYear();
-    }
-}
-
-function logout() {
-    clearUserSession();
-    clearSelection();
-    hideAllSections();
-    
-    if (elements.emailSection) {
-        elements.emailSection.style.display = 'block';
-    }
-    
-    showStatus('👋 Session terminée • Prêt pour la vérification', 'info');
-}
-
-function retryAction() {
-    hideAllSections();
-    if (elements.emailSection) {
-        elements.emailSection.style.display = 'block';
-    }
-    initializeApp();
-}
-
-function goToEmailSection() {
-    hideAllSections();
-    if (elements.emailSection) {
-        elements.emailSection.style.display = 'block';
-    }
-}
-
 // ==================== ÉVÉNEMENTS ====================
-
 function setupEventListeners() {
-    // Fermer modales en cliquant en dehors
-    document.addEventListener('click', (e) => {
-        if (elements.confirmationModal && e.target === elements.confirmationModal) {
-            hideModal();
-        }
-        if (elements.systemInfoModal && e.target === elements.systemInfoModal) {
-            hideSystemInfoModal();
-        }
-        if (elements.accessibilityModal && e.target === elements.accessibilityModal) {
-            hideAccessibilityModal();
-        }
-    });
-    
-    // Échap pour fermer modales
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            hideModal();
-            hideSystemInfoModal();
-            hideAccessibilityModal();
-        }
-    });
-    
-    // Validation email en temps réel
+    // Email input
     if (elements.emailInput) {
         elements.emailInput.addEventListener('input', () => {
             if (elements.emailError) {
@@ -1013,25 +604,43 @@ function setupEventListeners() {
             }
         });
         
-        // Auto-focus sur l'email
-        if (elements.emailSection && elements.emailSection.style.display !== 'none') {
-            setTimeout(() => {
-                elements.emailInput.focus();
-            }, 100);
-        }
-        
-        // Entrée pour valider
         elements.emailInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 verifyEmail();
             }
         });
+        
+        // Auto-focus
+        setTimeout(() => {
+            if (elements.emailInput && elements.emailSection.style.display !== 'none') {
+                elements.emailInput.focus();
+            }
+        }, 100);
     }
     
-    // Bouton vérifier
+    // Verify button
     if (elements.verifyBtn) {
         elements.verifyBtn.addEventListener('click', verifyEmail);
     }
+    
+    // Confirm vote button
+    if (elements.confirmVoteBtn) {
+        elements.confirmVoteBtn.addEventListener('click', submitVote);
+    }
+    
+    // Fermer modales
+    document.addEventListener('click', (e) => {
+        if (elements.confirmationModal && e.target === elements.confirmationModal) {
+            hideModal();
+        }
+    });
+    
+    // Échap pour fermer modales
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            hideModal();
+        }
+    });
     
     // Détection connexion
     window.addEventListener('online', () => {
@@ -1044,23 +653,13 @@ function setupEventListeners() {
 }
 
 // ==================== EXPORT GLOBAL ====================
-
 window.verifyEmail = verifyEmail;
 window.selectCandidate = selectCandidate;
-window.filterCandidates = filterCandidates;
-window.clearSelection = clearSelection;
 window.showConfirmationModal = showConfirmationModal;
 window.submitVote = submitVote;
 window.hideModal = hideModal;
-window.showSystemInfo = showSystemInfo;
-window.hideSystemInfoModal = hideSystemInfoModal;
-window.showAccessibilityInfo = showAccessibilityInfo;
-window.hideAccessibilityModal = hideAccessibilityModal;
-window.logout = logout;
-window.retryAction = retryAction;
-window.goToEmailSection = goToEmailSection;
+window.clearSelection = clearSelection;
+window.logout = clearUserSession;
 
-// Message de démarrage
-console.log('=== Système de Vote Scolaire 2026 ===');
-console.log('Établissement: Cours la privés Source de la Fontaine');
-console.log('URL:', window.location.origin);
+// Message final
+console.log('✅ Système de vote chargé avec succès');
