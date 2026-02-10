@@ -1,15 +1,15 @@
 services:
   - type: web
-    name: vote-scolaire-la-source
+    name: vote-scolaire-2026
     env: python
-    region: frankfurt
-    rootDirectory: backend  # IMPORTANT: Spécifier le dossier backend
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 2 --timeout 120
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: gunicorn --chdir backend app:app
     envVars:
-      - key: SECRET_KEY
-        generateValue: true
       - key: PORT
         value: 10000
-    healthCheckPath: /api/status
-    autoDeploy: true
+      - key: PYTHON_VERSION
+        value: 3.11.8
+    disk:
+      name: votes-data
+      mountPath: /opt/render/project/src/backend
+      sizeGB: 1
