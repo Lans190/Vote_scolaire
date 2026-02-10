@@ -2,13 +2,11 @@ services:
   - type: web
     name: vote-scolaire
     env: python
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: cd backend && gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r backend/requirements.txt
+    startCommand: cd backend && gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120
     envVars:
       - key: PORT
         value: 10000
-      - key: PYTHON_VERSION
-        value: 3.9.0
-      - key: SECRET_KEY
-        generateValue: true
     autoDeploy: true
