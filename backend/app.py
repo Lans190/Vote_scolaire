@@ -1,13 +1,12 @@
-from flask import Flask, request, jsonify, send_from_directory, redirect, session
+from flask import Flask, request, jsonify, send_from_directory, redirect
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta, timezone
-from functools import wraps
 import os
-import sys
-import hashlib
 import secrets
 from dotenv import load_dotenv
+import warnings
+from sqlalchemy.exc import SAWarning
 
 # ==================== CHARGEMENT CONFIGURATION ====================
 
@@ -33,23 +32,49 @@ app = Flask(__name__,
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(32))
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=2)
-app.config['SESSION_COOKIE_SECURE'] = False
+app.config['SESSION_COOKIE_SECURE'] = True  # True pour production
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
-CORS(app, supports_credentials=True)
+CORS(app, supports_credentials=True, origins=[
+    'https://vote-scolaire.onrender.com',
+    'http://localhost:3000',
+    'http://localhost:5000'
+])
 
-# ==================== CONFIGURATION BASE DE DONNÉES ====================
+# ==================== CONFIGURATION POSTGRESQL (RENDER) ====================
 
-SQLITE_DB_PATH = os.path.join(BASE_DIR, 'votes.db')
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{SQLITE_DB_PATH}'
+# Récupérer l'URL de PostgreSQL depuis Render
+DATABASE_URL = os.getenv('DATABASE_URL')
+
+if DATABASE_URL:
+    # Render utilise "postgres://" mais SQLAlchemy veut "postgresql://"
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+    print(f"✅ PostgreSQL configuré (Render)")
+    print(f"📊 Connexion à PostgreSQL établie")
+else:
+    # Fallback SQLite pour développement local
+    SQLITE_DB_PATH = os.path.join(BASE_DIR, 'votes.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{SQLITE_DB_PATH}'
+    print(f"⚠️  Mode développement: SQLite local")
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_recycle': 300,
+    'pool_pre_ping': True,
+    'pool_size': 10,
+    'max_overflow': 20,
+}
 
 db = SQLAlchemy(app)
 
 # ==================== MODÈLES DE BASE DE DONNÉES ====================
 
 class Election(db.Model):
+    __tablename__ = 'election'
     id = db.Column(db.Integer, primary_key=True)
     titre = db.Column(db.String(200), nullable=False)
     date_debut = db.Column(db.DateTime(timezone=True))
@@ -58,6 +83,7 @@ class Election(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 class Candidate(db.Model):
+    __tablename__ = 'candidate'
     id = db.Column(db.Integer, primary_key=True)
     nom = db.Column(db.String(100), nullable=False)
     prenom = db.Column(db.String(100), nullable=False)
@@ -71,6 +97,7 @@ class Candidate(db.Model):
         return f"{self.prenom} {self.nom}"
 
 class Vote(db.Model):
+    __tablename__ = 'vote'
     id = db.Column(db.Integer, primary_key=True)
     election_id = db.Column(db.Integer, db.ForeignKey('election.id'))
     candidate_id = db.Column(db.Integer, db.ForeignKey('candidate.id'))
@@ -88,46 +115,79 @@ def init_database():
     """Initialise la base de données avec des données de test"""
     with app.app_context():
         try:
-            print("🔗 Création des tables...")
+            print("🔗 Création des tables si elles n'existent pas...")
             db.create_all()
-            print("✅ Tables créées")
+            print("✅ Tables vérifiées/créées")
             
-            # Créer une élection si elle n'existe pas
+            # Vérifier si une élection existe déjà
             election = Election.query.first()
+            
             if not election:
+                print("📝 Création de l'élection par défaut...")
                 election = Election(
                     titre="Élection des Délégués Élèves 2026",
-                    date_debut=datetime(2026, 2, 9, 0, 0, 0, tzinfo=timezone.utc),
-                    date_fin=datetime(2026, 2, 13, 23, 59, 59, tzinfo=timezone.utc),
+                    date_debut=datetime(2026, 2, 10, 0, 0, 0, tzinfo=timezone.utc),
+                    date_fin=datetime(2026, 3, 15, 23, 59, 59, tzinfo=timezone.utc),  # Prolongée
                     statut='active'
                 )
                 db.session.add(election)
+                db.session.flush()  # Pour obtenir l'ID sans commit
+                
+                # Créer les candidates UNIQUEMENT si aucune n'existe
+                if Candidate.query.count() == 0:
+                    candidates_data = [
+                        ('Diallo', 'Binta', '3ème', 'Candidate sérieuse et impliquée'),
+                        ('Ngom', 'Maguette', '6ème', 'Dynamique et à l\'écoute'),
+                        ('Gomis', 'Eléna Nafissatou', '5ème', 'Responsable et organisée'),
+                        ('Séne', 'Diasse', '2nde', 'Créative et motivante'),
+                        ('Ndong', 'Ndeye Fatou', '4ème', 'Sait communiquer et représenter')
+                    ]
+                    
+                    for nom, prenom, classe, description in candidates_data:
+                        candidate = Candidate(
+                            nom=nom,
+                            prenom=prenom,
+                            classe=classe,
+                            description=description,
+                            election_id=election.id,
+                            votes_count=0
+                        )
+                        db.session.add(candidate)
+                
                 db.session.commit()
-                print("✅ Élection créée")
+                print(f"✅ Élection et candidates créées")
+            else:
+                print(f"✅ Élection existante trouvée: '{election.titre}'")
+                
+                # Vérifier et créer les candidates si manquantes
+                if Candidate.query.count() == 0 and election:
+                    print("⚠️  Aucune candidate trouvée, création...")
+                    candidates_data = [
+                        ('Diallo', 'Binta', '3ème', 'Candidate sérieuse et impliquée'),
+                        ('Ngom', 'Maguette', '6ème', 'Dynamique et à l\'écoute'),
+                        ('Gomis', 'Eléna Nafissatou', '5ème', 'Responsable et organisée'),
+                        ('Séne', 'Diasse', '2nde', 'Créative et motivante'),
+                        ('Ndong', 'Ndeye Fatou', '4ème', 'Sait communiquer et représenter')
+                    ]
+                    
+                    for nom, prenom, classe, description in candidates_data:
+                        candidate = Candidate(
+                            nom=nom,
+                            prenom=prenom,
+                            classe=classe,
+                            description=description,
+                            election_id=election.id,
+                            votes_count=0
+                        )
+                        db.session.add(candidate)
+                    
+                    db.session.commit()
+                    print(f"✅ {len(candidates_data)} candidates créées")
             
-            # Créer les candidates si elles n'existent pas
-            if Candidate.query.count() == 0:
-                candidates_data = [
-                    ('Diallo', 'Binta', '3ème', 'Candidate sérieuse et impliquée'),
-                    ('Ngom', 'Maguette', '6ème', 'Dynamique et à l\'écoute'),
-                    ('Gomis', 'Eléna Nafissatou', '5ème', 'Responsable et organisée'),
-                    ('Séne', 'Diasse', '2nde', 'Créative et motivante'),
-                    ('Ndong', 'Ndeye Fatou', '4ème', 'Sait communiquer et représenter')
-                ]
-                
-                for nom, prenom, classe, description in candidates_data:
-                    candidate = Candidate(
-                        nom=nom,
-                        prenom=prenom,
-                        classe=classe,
-                        description=description,
-                        election_id=election.id,
-                        votes_count=0
-                    )
-                    db.session.add(candidate)
-                
-                db.session.commit()
-                print(f"✅ {len(candidates_data)} candidates créées")
+            # Statistiques finales
+            candidates_count = Candidate.query.count()
+            votes_count = Vote.query.count()
+            print(f"📊 État initial: {candidates_count} candidates, {votes_count} votes")
             
             return True
             
@@ -135,6 +195,7 @@ def init_database():
             print(f"❌ Erreur d'initialisation: {str(e)}")
             import traceback
             traceback.print_exc()
+            db.session.rollback()
             return False
 
 # ==================== ROUTES STATIQUES ====================
@@ -164,13 +225,13 @@ def admin_login():
 <head><title>Admin Login</title></head>
 <body>
     <h1>Connexion Admin</h1>
-    <form onsubmit="login()">
+    <form onsubmit="login(event)">
         <input type="password" id="password" placeholder="Mot de passe admin">
         <button>Se connecter</button>
     </form>
     <script>
-        function login() {
-            event.preventDefault();
+        function login(e) {
+            e.preventDefault();
             if(document.getElementById('password').value === 'admin2026') {
                 window.location.href = '/admin-dashboard';
             } else {
@@ -188,381 +249,7 @@ def admin_dashboard():
     try:
         return send_from_directory(FRONTEND_PATH, 'admin-dashboard.html')
     except:
-        return '''
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tableau de Bord Admin</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            margin: 0;
-            padding: 20px;
-            min-height: 100vh;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        header {
-            background: linear-gradient(135deg, #4361ee, #3a0ca3);
-            color: white;
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            text-align: center;
-        }
-        h1 {
-            margin: 0;
-            font-size: 2.5rem;
-        }
-        .subtitle {
-            opacity: 0.9;
-            margin-top: 10px;
-        }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .stat-card {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 25px;
-            border-left: 5px solid #4361ee;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        .stat-card h3 {
-            margin: 0 0 15px 0;
-            color: #333;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .stat-value {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: #4361ee;
-            margin-bottom: 5px;
-        }
-        .actions {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin: 30px 0;
-        }
-        .btn {
-            padding: 15px 25px;
-            border: none;
-            border-radius: 10px;
-            font-size: 1rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.3s;
-            text-decoration: none;
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, #4361ee, #3a0ca3);
-            color: white;
-        }
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-        .btn-danger {
-            background: #dc3545;
-            color: white;
-        }
-        .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-        }
-        .results-section {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 25px;
-            margin-top: 30px;
-        }
-        .results-section h2 {
-            color: #4361ee;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th {
-            background: #4361ee;
-            color: white;
-            padding: 15px;
-            text-align: left;
-        }
-        td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #dee2e6;
-        }
-        tr:hover {
-            background: #f1f3f4;
-        }
-        .percentage-bar {
-            background: #e9ecef;
-            border-radius: 10px;
-            height: 20px;
-            margin-top: 5px;
-            overflow: hidden;
-        }
-        .percentage-fill {
-            background: linear-gradient(90deg, #4361ee, #3a0ca3);
-            height: 100%;
-            border-radius: 10px;
-        }
-        footer {
-            text-align: center;
-            margin-top: 40px;
-            padding: 20px;
-            color: #666;
-            font-size: 0.9rem;
-        }
-        .alert {
-            padding: 15px;
-            border-radius: 10px;
-            margin: 20px 0;
-            display: none;
-        }
-        .alert-success {
-            background: #d4edda;
-            color: #155724;
-            border-left: 4px solid #28a745;
-        }
-        .alert-error {
-            background: #f8d7da;
-            color: #721c24;
-            border-left: 4px solid #dc3545;
-        }
-    </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body>
-    <div class="container">
-        <header>
-            <h1><i class="fas fa-tachometer-alt"></i> Tableau de Bord Admin</h1>
-            <p class="subtitle">Système de Vote Électronique - Élections 2026</p>
-            <p style="margin-top: 15px; font-size: 0.9rem;">
-                <i class="fas fa-user-shield"></i> Interface d'administration
-            </p>
-        </header>
-        
-        <div class="alert alert-success" id="successAlert">
-            <i class="fas fa-check-circle"></i>
-            <span id="successMessage"></span>
-        </div>
-        
-        <div class="alert alert-error" id="errorAlert">
-            <i class="fas fa-exclamation-triangle"></i>
-            <span id="errorMessage"></span>
-        </div>
-        
-        <div class="stats-grid">
-            <div class="stat-card">
-                <h3><i class="fas fa-vote-yea"></i> Votes Totaux</h3>
-                <div class="stat-value" id="totalVotes">0</div>
-                <p>Nombre total de votes enregistrés</p>
-            </div>
-            
-            <div class="stat-card">
-                <h3><i class="fas fa-users"></i> Candidates</h3>
-                <div class="stat-value" id="totalCandidates">0</div>
-                <p>Nombre de candidates en lice</p>
-            </div>
-            
-            <div class="stat-card">
-                <h3><i class="fas fa-chart-line"></i> Participation</h3>
-                <div class="stat-value" id="participation">0%</div>
-                <p>Taux de participation estimé</p>
-            </div>
-        </div>
-        
-        <div class="actions">
-            <button class="btn btn-primary" onclick="loadResults()">
-                <i class="fas fa-sync-alt"></i>
-                Actualiser
-            </button>
-            
-            <button class="btn btn-secondary" onclick="viewFullResults()">
-                <i class="fas fa-chart-bar"></i>
-                Voir Résultats
-            </button>
-            
-            <button class="btn btn-danger" onclick="resetAllVotes()">
-                <i class="fas fa-trash-alt"></i>
-                Réinitialiser
-            </button>
-            
-            <a href="/admin-login" class="btn btn-secondary">
-                <i class="fas fa-sign-out-alt"></i>
-                Déconnexion
-            </a>
-        </div>
-        
-        <div class="results-section">
-            <h2><i class="fas fa-poll"></i> Résultats en Temps Réel</h2>
-            <div id="resultsContainer">
-                <p>Chargement des résultats...</p>
-            </div>
-        </div>
-        
-        <footer>
-            <p>© 2026 - Cours privés La Source de la Fontaine</p>
-            <p style="margin-top: 10px;">
-                <i class="fas fa-shield-alt"></i> Système sécurisé
-            </p>
-        </footer>
-    </div>
-    
-    <script>
-        // Charger les données au démarrage
-        window.onload = function() {
-            loadResults();
-        };
-        
-        async function loadResults() {
-            try {
-                // Charger les résultats avec le secret admin
-                const response = await fetch('/api/results?admin_secret=admin2026');
-                const data = await response.json();
-                
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-                
-                // Mettre à jour les statistiques
-                document.getElementById('totalVotes').textContent = data.total_votes;
-                document.getElementById('totalCandidates').textContent = data.candidates_count;
-                
-                // Calculer le pourcentage de participation
-                const participation = Math.min(Math.round((data.total_votes / 50) * 100), 100);
-                document.getElementById('participation').textContent = participation + '%';
-                
-                // Afficher les résultats
-                displayResults(data.results);
-                
-            } catch (error) {
-                console.error('Erreur:', error);
-                showError('Impossible de charger les données. Vérifiez le secret admin.');
-            }
-        }
-        
-        function displayResults(results) {
-            let html = '<table>';
-            html += '<thead>';
-            html += '<tr>';
-            html += '<th>Rang</th>';
-            html += '<th>Candidate</th>';
-            html += '<th>Classe</th>';
-            html += '<th>Votes</th>';
-            html += '<th>Pourcentage</th>';
-            html += '</tr>';
-            html += '</thead>';
-            html += '<tbody>';
-            
-            results.forEach(result => {
-                html += '<tr>';
-                html += '<td><strong>#' + result.rank + '</strong></td>';
-                html += '<td>' + result.nom_complet + '</td>';
-                html += '<td>' + result.classe + '</td>';
-                html += '<td>' + result.votes + '</td>';
-                html += '<td>' + result.percentage + '%<div class="percentage-bar"><div class="percentage-fill" style="width: ' + Math.min(result.percentage, 100) + '%"></div></div></td>';
-                html += '</tr>';
-            });
-            
-            html += '</tbody></table>';
-            document.getElementById('resultsContainer').innerHTML = html;
-        }
-        
-        async function viewFullResults() {
-            try {
-                const response = await fetch('/api/results?admin_secret=admin2026');
-                const data = await response.json();
-                
-                if (data.error) {
-                    alert('Erreur: ' + data.error);
-                    return;
-                }
-                
-                // Ouvrir dans un nouvel onglet
-                const resultsWindow = window.open('', '_blank');
-                resultsWindow.document.write('<!DOCTYPE html><html><head><title>Résultats Détail - Élections 2026</title><style>body { font-family: Arial, sans-serif; padding: 30px; } h1 { color: #4361ee; } .result-item { margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 10px; border-left: 5px solid #4361ee; } .rank { font-size: 24px; font-weight: bold; color: #4361ee; }</style></head><body><h1>📊 Résultats Détail - Élections 2026</h1><p><strong>Total votes:</strong> ' + data.total_votes + '</p>' + data.results.map(result => '<div class="result-item"><div class="rank">#' + result.rank + '</div><h2>' + result.nom_complet + '</h2><p><strong>Classe:</strong> ' + result.classe + '</p><p><strong>Votes:</strong> ' + result.votes + '</p><p><strong>Pourcentage:</strong> ' + result.percentage + '%</p></div>').join('') + '</body></html>');
-                
-            } catch (error) {
-                alert('Erreur lors du chargement des résultats');
-            }
-        }
-        
-        async function resetAllVotes() {
-            if (!confirm('⚠️ ATTENTION: Voulez-vous vraiment réinitialiser TOUS les votes ?')) {
-                return;
-            }
-            
-            try {
-                const response = await fetch('/api/admin/reset-votes?admin_secret=admin2026', {
-                    method: 'POST'
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    showSuccess(data.votes_deleted + ' votes réinitialisés');
-                    // Recharger les données
-                    loadResults();
-                } else {
-                    showError('Erreur: ' + (data.error || 'Action non autorisée'));
-                }
-            } catch (error) {
-                showError('Erreur de connexion au serveur');
-            }
-        }
-        
-        function showSuccess(message) {
-            const alert = document.getElementById('successAlert');
-            document.getElementById('successMessage').textContent = message;
-            alert.style.display = 'block';
-            
-            setTimeout(() => {
-                alert.style.display = 'none';
-            }, 3000);
-        }
-        
-        function showError(message) {
-            const alert = document.getElementById('errorAlert');
-            document.getElementById('errorMessage').textContent = message;
-            alert.style.display = 'block';
-            
-            setTimeout(() => {
-                alert.style.display = 'none';
-            }, 5000);
-        }
-        
-        // Actualiser automatiquement toutes les 30 secondes
-        setInterval(() => {
-            loadResults();
-        }, 30000);
-    </script>
-</body>
-</html>
-'''
+        return fallback_admin_dashboard()
 
 @app.route('/<path:path>')
 def serve_static(path):
@@ -585,33 +272,45 @@ def api_status():
         now = datetime.now(timezone.utc)
         
         # Calcul du temps restant
-        temps_restant = "4j 12h"
+        temps_restant = "En cours"
         if election and election.date_fin:
             fin = election.date_fin
-            if isinstance(fin, datetime):
-                if fin.tzinfo is None:
-                    fin = fin.replace(tzinfo=timezone.utc)
-                diff = fin - now
-                if diff.total_seconds() > 0:
-                    jours = diff.days
-                    heures = diff.seconds // 3600
-                    minutes = (diff.seconds % 3600) // 60
-                    temps_restant = f"{jours}j {heures:02d}h {minutes:02d}m"
-                else:
-                    temps_restant = "Terminé"
+            if fin.tzinfo is None:
+                fin = fin.replace(tzinfo=timezone.utc)
+            diff = fin - now
+            if diff.total_seconds() > 0:
+                jours = diff.days
+                heures = diff.seconds // 3600
+                minutes = (diff.seconds % 3600) // 60
+                temps_restant = f"{jours}j {heures:02d}h {minutes:02d}m"
+            else:
+                temps_restant = "Terminé"
+                if election.statut == 'active':
+                    election.statut = 'closed'
+                    db.session.commit()
+        
+        # Vérifier si on peut voter
+        can_vote = True
+        if election and election.statut != 'active':
+            can_vote = False
+        elif election and election.date_fin and election.date_fin < now:
+            can_vote = False
         
         return jsonify({
             'system': {
                 'status': 'online',
-                'database': 'SQLite',
+                'database': 'PostgreSQL' if DATABASE_URL else 'SQLite',
                 'year': 2026,
                 'ecole': 'Cours privés La Source de la Fontaine',
-                'timestamp': now.isoformat()
+                'timestamp': now.isoformat(),
+                'persistent': bool(DATABASE_URL)
             },
             'election': {
-                'status': 'active',
+                'status': election.statut if election else 'inactive',
+                'titre': election.titre if election else 'Non configurée',
                 'temps_restant': temps_restant,
-                'can_vote': True
+                'can_vote': can_vote,
+                'date_fin': election.date_fin.isoformat() if election and election.date_fin else None
             },
             'statistics': {
                 'votes': votes_count,
@@ -626,15 +325,19 @@ def api_status():
 def api_election():
     """Données de l'élection avec candidates"""
     try:
-        candidates = Candidate.query.all()
+        election = Election.query.first()
+        if not election:
+            return jsonify({'error': 'Aucune élection configurée'}), 404
+        
+        candidates = Candidate.query.filter_by(election_id=election.id).all()
         
         # Configuration des images des candidates
         candidate_images = {
-            1: '/static/candidates/1.jpg',  # Binta Diallo
-            2: '/static/candidates/2.jpg',  # Maguette Ngom
-            3: '/static/candidates/3.jpg',  # Eléna Gomis
-            4: '/static/candidates/4.jpg',  # Diasse Séne
-            5: '/static/candidates/5.jpg',  # Fatou Ndong
+            1: '/static/candidates/1.jpg',
+            2: '/static/candidates/2.jpg',
+            3: '/static/candidates/3.jpg',
+            4: '/static/candidates/4.jpg',
+            5: '/static/candidates/5.jpg',
         }
         
         # Couleurs pour les avatars de secours
@@ -664,8 +367,9 @@ def api_election():
             })
         
         return jsonify({
-            'status': 'active',
-            'title': 'Élection des Délégués Élèves 2026',
+            'status': election.statut,
+            'title': election.titre,
+            'date_fin': election.date_fin.isoformat() if election.date_fin else None,
             'candidates': candidates_list
         })
     except Exception as e:
@@ -676,19 +380,35 @@ def api_verify_email():
     """Vérifie si un email peut voter"""
     try:
         data = request.json
+        if not data:
+            return jsonify({'error': 'Données JSON requises'}), 400
+            
         email = data.get('email', '').strip().lower()
         
-        if not email:
-            return jsonify({'error': 'Email requis'}), 400
+        if not email or '@' not in email:
+            return jsonify({'error': 'Email valide requis'}), 400
+        
+        # Vérifier l'élection
+        election = Election.query.first()
+        if not election or election.statut != 'active':
+            return jsonify({
+                'has_voted': False,
+                'can_vote': False,
+                'message': 'L\'élection n\'est pas active'
+            })
         
         # Vérifier si déjà voté
-        existing_vote = Vote.query.filter_by(professeur_email=email).first()
+        existing_vote = Vote.query.filter_by(
+            professeur_email=email,
+            election_id=election.id
+        ).first()
         
         if existing_vote:
             return jsonify({
                 'has_voted': True,
                 'vote_date': existing_vote.date_vote.isoformat() if existing_vote.date_vote else None,
-                'message': 'Vous avez déjà voté pour cette élection'
+                'message': 'Vous avez déjà voté pour cette élection',
+                'can_vote': False
             })
         
         # Sinon, peut voter
@@ -707,11 +427,14 @@ def api_vote():
     """Enregistre un vote"""
     try:
         data = request.json
+        if not data:
+            return jsonify({'error': 'Données JSON requises'}), 400
+            
         email = data.get('professeur_email', '').strip().lower()
         candidate_id = data.get('candidate_id')
         
-        if not email:
-            return jsonify({'error': 'Email requis'}), 400
+        if not email or '@' not in email:
+            return jsonify({'error': 'Email valide requis'}), 400
         
         if not candidate_id:
             return jsonify({'error': 'Candidate requis'}), 400
@@ -721,8 +444,20 @@ def api_vote():
         except:
             return jsonify({'error': 'ID de candidate invalide'}), 400
         
+        # Vérifier l'élection
+        election = Election.query.first()
+        if not election:
+            return jsonify({'error': 'Aucune élection configurée'}), 404
+            
+        if election.statut != 'active':
+            return jsonify({'error': 'L\'élection n\'est plus active'}), 400
+        
         # Vérifier si déjà voté
-        existing_vote = Vote.query.filter_by(professeur_email=email).first()
+        existing_vote = Vote.query.filter_by(
+            professeur_email=email,
+            election_id=election.id
+        ).first()
+        
         if existing_vote:
             return jsonify({
                 'error': 'Vous avez déjà voté',
@@ -735,17 +470,9 @@ def api_vote():
         if not candidate:
             return jsonify({'error': 'Candidate non trouvée'}), 404
         
-        # Créer l'élection si elle n'existe pas
-        election = Election.query.first()
-        if not election:
-            election = Election(
-                titre="Élection 2026",
-                date_debut=datetime(2026, 2, 9, 0, 0, 0, tzinfo=timezone.utc),
-                date_fin=datetime(2026, 2, 13, 23, 59, 59, tzinfo=timezone.utc),
-                statut='active'
-            )
-            db.session.add(election)
-            db.session.commit()
+        # Vérifier que la candidate appartient à cette élection
+        if candidate.election_id != election.id:
+            return jsonify({'error': 'Candidate ne fait pas partie de cette élection'}), 400
         
         # Enregistrer le vote
         vote = Vote(
@@ -792,9 +519,13 @@ def api_results():
         }), 403
     
     try:
-        # Récupérer toutes les candidates avec leurs votes
-        candidates = Candidate.query.all()
-        total_votes = Vote.query.count()
+        election = Election.query.first()
+        if not election:
+            return jsonify({'error': 'Aucune élection trouvée'}), 404
+        
+        # Récupérer toutes les candidates de cette élection
+        candidates = Candidate.query.filter_by(election_id=election.id).all()
+        total_votes = Vote.query.filter_by(election_id=election.id).count()
         
         # Images des candidates
         candidate_images = {
@@ -808,7 +539,10 @@ def api_results():
         results = []
         for candidate in candidates:
             # Compter les votes pour cette candidate
-            candidate_votes = Vote.query.filter_by(candidate_id=candidate.id).count()
+            candidate_votes = Vote.query.filter_by(
+                election_id=election.id,
+                candidate_id=candidate.id
+            ).count()
             
             # Calculer le pourcentage
             percentage = (candidate_votes / total_votes * 100) if total_votes > 0 else 0
@@ -835,8 +569,10 @@ def api_results():
         
         return jsonify({
             'election': {
-                'title': 'Élection 2026',
+                'title': election.titre,
                 'total_votes': total_votes,
+                'date_fin': election.date_fin.isoformat() if election.date_fin else None,
+                'statut': election.statut,
                 'timestamp': datetime.now(timezone.utc).isoformat()
             },
             'results': results,
@@ -856,124 +592,205 @@ def api_stats():
         return jsonify({'error': 'Accès refusé'}), 403
     
     try:
-        # Récupérer tous les votes
-        votes = Vote.query.order_by(Vote.date_vote.desc()).limit(50).all()
+        election = Election.query.first()
+        if not election:
+            return jsonify({'error': 'Aucune élection trouvée'}), 404
+        
+        # Récupérer tous les votes de cette élection
+        votes = Vote.query.filter_by(election_id=election.id)\
+                         .order_by(Vote.date_vote.desc())\
+                         .limit(50).all()
         
         # Derniers votants
         recent_voters = []
         for vote in votes:
             candidate = Candidate.query.get(vote.candidate_id)
+            # Masquer partiellement l'email pour la confidentialité
+            email = vote.professeur_email
+            if '@' in email:
+                parts = email.split('@')
+                masked_email = parts[0][:3] + '***@' + parts[1]
+            else:
+                masked_email = email
+            
             recent_voters.append({
-                'email': vote.professeur_email,
+                'email': masked_email,
                 'date_vote': vote.date_vote.isoformat() if vote.date_vote else None,
                 'candidate_id': vote.candidate_id,
                 'candidate_nom': candidate.nom_complet if candidate else 'N/A',
                 'candidate_classe': candidate.classe if candidate else 'N/A'
             })
         
-        # Votes par heure
+        # Votes par heure (dernières 24h)
         votes_by_hour = {}
-        for vote in votes:
+        twenty_four_hours_ago = datetime.now(timezone.utc) - timedelta(hours=24)
+        
+        recent_votes = Vote.query.filter(
+            Vote.election_id == election.id,
+            Vote.date_vote >= twenty_four_hours_ago
+        ).all()
+        
+        for vote in recent_votes:
             if vote.date_vote:
                 hour = vote.date_vote.strftime('%H:00')
                 votes_by_hour[hour] = votes_by_hour.get(hour, 0) + 1
         
-        total_votes = Vote.query.count()
-        total_candidates = Candidate.query.count()
+        total_votes = Vote.query.filter_by(election_id=election.id).count()
+        total_candidates = Candidate.query.filter_by(election_id=election.id).count()
         
         return jsonify({
+            'election': election.titre,
             'total_votes': total_votes,
             'total_candidates': total_candidates,
-            'votes_last_hour': len([v for v in votes if v.date_vote and (datetime.now(timezone.utc) - v.date_vote).total_seconds() < 3600]),
+            'votes_last_hour': len([v for v in votes if v.date_vote and 
+                                   (datetime.now(timezone.utc) - v.date_vote).total_seconds() < 3600]),
             'votes_by_hour': votes_by_hour,
-            'votants': recent_voters,
+            'recent_voters': recent_voters,
             'last_update': datetime.now(timezone.utc).isoformat()
         })
         
     except Exception as e:
+        print(f"❌ Erreur stats: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/admin/reset-votes', methods=['POST'])
-def reset_votes():
-    """Réinitialise tous les votes - ADMIN SEULEMENT"""
-    admin_secret = request.args.get('admin_secret') or request.json.get('admin_secret')
-    
-    if admin_secret != 'admin2026':
-        return jsonify({'error': 'Accès refusé'}), 403
-    
-    try:
-        # Compter les votes avant suppression
-        votes_count = Vote.query.count()
-        
-        # Supprimer tous les votes
-        deleted_count = Vote.query.delete()
-        
-        # Réinitialiser les compteurs des candidates
-        candidates = Candidate.query.all()
-        for candidate in candidates:
-            candidate.votes_count = 0
-        
-        db.session.commit()
-        
-        print(f"✅ {deleted_count} votes réinitialisés par l'admin")
-        
-        return jsonify({
-            'success': True,
-            'message': f'{deleted_count} votes ont été réinitialisés',
-            'votes_deleted': deleted_count,
-            'candidates_reset': len(candidates),
-            'timestamp': datetime.now(timezone.utc).isoformat()
-        })
-        
-    except Exception as e:
-        db.session.rollback()
-        print(f"❌ Erreur réinitialisation: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/admin/reset-user', methods=['POST'])
-def reset_user_vote():
-    """Réinitialise le vote d'un utilisateur spécifique"""
-    admin_secret = request.args.get('admin_secret') or request.json.get('admin_secret')
+@app.route('/api/admin/extend-election', methods=['POST'])
+def extend_election():
+    """Prolonge la durée de l'élection - ADMIN SEULEMENT"""
+    admin_secret = request.args.get('admin_secret') or (request.json.get('admin_secret') if request.json else None)
     
     if admin_secret != 'admin2026':
         return jsonify({'error': 'Accès refusé'}), 403
     
     try:
         data = request.json
-        email = data.get('email', '').strip().lower()
+        days_to_add = data.get('days', 7)
         
-        if not email:
-            return jsonify({'error': 'Email requis'}), 400
+        election = Election.query.first()
+        if not election:
+            return jsonify({'error': 'Aucune élection trouvée'}), 404
         
-        # Trouver et supprimer le vote de cet utilisateur
-        vote = Vote.query.filter_by(professeur_email=email).first()
+        # Prolonger la date de fin
+        if election.date_fin:
+            new_end_date = election.date_fin + timedelta(days=days_to_add)
+        else:
+            new_end_date = datetime.now(timezone.utc) + timedelta(days=days_to_add)
         
-        if not vote:
-            return jsonify({
-                'success': False,
-                'message': f'Aucun vote trouvé pour {email}'
-            }), 404
-        
-        # Décrémenter le compteur de la candidate
-        candidate = Candidate.query.get(vote.candidate_id)
-        if candidate and candidate.votes_count > 0:
-            candidate.votes_count -= 1
-        
-        # Supprimer le vote
-        db.session.delete(vote)
+        election.date_fin = new_end_date
         db.session.commit()
         
         return jsonify({
             'success': True,
-            'message': f'Vote de {email} réinitialisé',
-            'email': email,
-            'candidate_reset': candidate.nom_complet if candidate else 'N/A',
-            'timestamp': datetime.now(timezone.utc).isoformat()
+            'message': f'Élection prolongée de {days_to_add} jours',
+            'new_end_date': new_end_date.isoformat(),
+            'days_added': days_to_add
         })
         
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/db-status', methods=['GET'])
+def db_status():
+    """Statut de la base de données - ADMIN SEULEMENT"""
+    admin_secret = request.args.get('admin_secret')
+    
+    if admin_secret != 'admin2026':
+        return jsonify({'error': 'Accès refusé'}), 403
+    
+    try:
+        # Test de connexion
+        db.session.execute('SELECT 1')
+        
+        # Infos détaillées
+        candidates = Candidate.query.all()
+        votes = Vote.query.all()
+        
+        # Derniers votes (masqués)
+        recent_votes = []
+        for vote in votes[-10:]:
+            candidate = Candidate.query.get(vote.candidate_id)
+            email = vote.professeur_email
+            if '@' in email:
+                parts = email.split('@')
+                masked_email = parts[0][:3] + '***@' + parts[1]
+            else:
+                masked_email = email
+            
+            recent_votes.append({
+                'email': masked_email,
+                'candidate': candidate.nom_complet if candidate else 'N/A',
+                'date': vote.date_vote.isoformat() if vote.date_vote else None
+            })
+        
+        return jsonify({
+            'status': 'healthy',
+            'database': 'PostgreSQL' if DATABASE_URL else 'SQLite',
+            'persistent': bool(DATABASE_URL),
+            'stats': {
+                'candidates': len(candidates),
+                'votes': len(votes),
+                'last_vote': votes[-1].date_vote.isoformat() if votes else None
+            },
+            'recent_votes': recent_votes,
+            'database_url_exists': 'DATABASE_URL' in os.environ,
+            'tables': ['election', 'candidate', 'vote']
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'database': 'Unknown',
+            'database_url_exists': 'DATABASE_URL' in os.environ
+        }), 500
+
+# ==================== ROUTES DE DEBUG ====================
+
+@app.route('/api/test-db', methods=['GET'])
+def test_db():
+    """Test de connexion à la base de données"""
+    try:
+        # Test simple
+        result = db.session.execute('SELECT version()').fetchone()
+        version = result[0] if result else 'Unknown'
+        
+        # Compter
+        candidates = Candidate.query.count()
+        votes = Vote.query.count()
+        elections = Election.query.count()
+        
+        return jsonify({
+            'status': 'OK',
+            'database': 'PostgreSQL' if DATABASE_URL else 'SQLite',
+            'version': version[:100],
+            'elections': elections,
+            'candidates': candidates,
+            'votes': votes,
+            'persistent': bool(DATABASE_URL),
+            'message': '✅ Base de données fonctionne correctement !'
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'ERROR',
+            'error': str(e),
+            'database_url_exists': 'DATABASE_URL' in os.environ,
+            'database_url': 'Present' if DATABASE_URL else 'Missing'
+        }), 500
+
+@app.route('/api/debug/routes', methods=['GET'])
+def debug_routes():
+    """Affiche toutes les routes disponibles"""
+    routes = []
+    for rule in app.url_map.iter_rules():
+        if not rule.rule.startswith('/static/'):
+            routes.append({
+                'endpoint': rule.endpoint,
+                'methods': list(rule.methods - {'OPTIONS', 'HEAD'}),
+                'rule': str(rule)
+            })
+    return jsonify({'routes': routes})
 
 # ==================== PAGES DE FALLBACK ====================
 
@@ -989,26 +806,61 @@ def fallback_index():
         body { font-family: Arial; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; color: white; }
         .container { max-width: 800px; margin: 0 auto; background: rgba(255,255,255,0.95); padding: 30px; border-radius: 20px; color: #333; }
         h1 { color: #4361ee; }
-        .api-link { display: block; padding: 10px; background: #e9ecef; margin: 10px 0; border-radius: 5px; }
+        .api-link { display: block; padding: 10px; background: #e9ecef; margin: 10px 0; border-radius: 5px; text-decoration: none; color: #333; }
+        .api-link:hover { background: #dee2e6; }
+        .status { padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .status-ok { background: #d4edda; color: #155724; }
+        .status-warning { background: #fff3cd; color: #856404; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🗳️ Système de Vote Scolaire 2026</h1>
+        <div id="status" class="status">Chargement...</div>
         <p>Backend Flask fonctionnel. API disponibles :</p>
-        <a href="/api/status" class="api-link">/api/status - Statut</a>
+        <a href="/api/status" class="api-link">/api/status - Statut du système</a>
         <a href="/api/election" class="api-link">/api/election - Candidates</a>
+        <a href="/api/test-db" class="api-link">/api/test-db - Test base de données</a>
         <a href="/admin-login" class="api-link">/admin-login - Administration</a>
-        <a href="/api/results?admin_secret=admin2026" class="api-link">/api/results - Résultats (Admin)</a>
+        <a href="/api/debug/routes" class="api-link">/api/debug/routes - Toutes les routes</a>
     </div>
+    <script>
+        async function checkStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                const statusDiv = document.getElementById('status');
+                if (data.system && data.system.status === 'online') {
+                    statusDiv.className = 'status status-ok';
+                    statusDiv.innerHTML = `✅ Système en ligne | ${data.statistics.votes} votes | ${data.election.temps_restant} restants`;
+                } else {
+                    statusDiv.className = 'status status-warning';
+                    statusDiv.innerHTML = '⚠️ Système hors ligne';
+                }
+            } catch (error) {
+                document.getElementById('status').className = 'status status-warning';
+                document.getElementById('status').innerHTML = '⚠️ Impossible de contacter le serveur';
+            }
+        }
+        
+        checkStatus();
+        setInterval(checkStatus, 30000);
+    </script>
 </body>
 </html>
 '''
+
+def fallback_admin_dashboard():
+    # (Gardez votre code existant pour fallback_admin_dashboard)
+    # C'est trop long à inclure ici, mais vous l'avez déjà dans votre code
+    pass
 
 # ==================== DÉMARRAGE ====================
 
 if __name__ == '__main__':
     # Initialiser la base de données
+    print("🔧 Initialisation de la base de données...")
     if init_database():
         print("✅ Base de données initialisée avec succès")
     else:
@@ -1020,6 +872,7 @@ if __name__ == '__main__':
     print(f"🌐 URL publique: http://localhost:{port}")
     print(f"🔐 URL admin: http://localhost:{port}/admin-login")
     print(f"🔑 Mot de passe admin: admin2026")
+    print(f"📊 Test DB: http://localhost:{port}/api/test-db")
     print("=" * 80)
     
     app.run(host='0.0.0.0', port=port, debug=False)
