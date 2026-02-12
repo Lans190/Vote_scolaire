@@ -2,1124 +2,707 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Élections 2026 • La Source de la Fontaine</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>Élections Délégués 2026 - La Source de la Fontaine</title>
+    <meta name="description" content="Système de vote électronique sécurisé pour l'élection des délégués élèves">
+    
     <style>
-        /* Variables CSS */
-        :root {
-            --primary: #4361ee;
-            --primary-dark: #3a0ca3;
-            --success: #2ecc71;
-            --warning: #ff9e00;
-            --danger: #ff595e;
-            --light: #f8f9fa;
-            --dark: #1a1a2e;
-            --gray: #6c757d;
-            --shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-        
-        /* Reset */
+        /* ========== RESET & VARIABLES ========== */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
         }
-        
+
+        :root {
+            --primary: #0d47a1;
+            --primary-dark: #0a3a7a;
+            --primary-light: #1565c0;
+            --success: #2e7d32;
+            --danger: #c62828;
+            --warning: #ff8f00;
+            --gray-100: #f8f9fa;
+            --gray-200: #e9ecef;
+            --gray-300: #dee2e6;
+            --gray-600: #6c757d;
+            --gray-900: #212529;
+            --shadow: 0 4px 20px rgba(0,0,0,0.08);
+            --border-radius: 16px;
+        }
+
+        /* ========== BACKGROUND ========== */
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-image: url('/assets/source.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
             min-height: 100vh;
-            color: #333;
-            padding: 20px;
+            line-height: 1.6;
         }
-        
+
+        .overlay {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(8px);
+            min-height: 100vh;
+            padding: clamp(16px, 5vw, 40px);
+            display: flex;
+            flex-direction: column;
+        }
+
         .container {
-            max-width: 800px;
+            max-width: 1400px;
             margin: 0 auto;
+            width: 100%;
+            flex: 1;
+        }
+
+        /* ========== HEADER AVEC LOGO ========== */
+        .hero {
             background: white;
-            border-radius: 20px;
-            overflow: hidden;
+            border-radius: var(--border-radius);
+            padding: clamp(20px, 4vw, 40px);
+            margin-bottom: clamp(20px, 4vw, 40px);
             box-shadow: var(--shadow);
-        }
-        
-        /* Header */
-        .header {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            padding: 40px;
-            text-align: center;
-            position: relative;
-        }
-        
-        .admin-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            padding: 10px 20px;
-            border-radius: 10px;
-            text-decoration: none;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s;
-        }
-        
-        .admin-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-3px);
-        }
-        
-        .logo {
-            font-size: 3rem;
-            margin-bottom: 20px;
-        }
-        
-        h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-        
-        .subtitle {
-            opacity: 0.9;
-            font-size: 1.1rem;
-        }
-        
-        /* Stats */
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            padding: 30px;
-            background: var(--light);
-        }
-        
-        .stat-card {
-            background: white;
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
             border-left: 6px solid var(--primary);
-        }
-        
-        .stat-card i {
-            font-size: 2rem;
-            color: var(--primary);
-            margin-bottom: 15px;
-        }
-        
-        .stat-card h3 {
-            font-size: 2rem;
-            color: var(--dark);
-            margin-bottom: 5px;
-        }
-        
-        .stat-card p {
-            color: var(--gray);
-            font-weight: 600;
-        }
-        
-        /* Main Content */
-        .main-content {
-            padding: 40px;
-        }
-        
-        .section {
-            display: none;
-            animation: fadeIn 0.5s;
-        }
-        
-        .section.active {
-            display: block;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        h2 {
-            color: var(--dark);
-            margin-bottom: 15px;
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: clamp(20px, 5vw, 40px);
+            flex-wrap: wrap;
         }
-        
-        h2 i {
-            color: var(--primary);
-        }
-        
-        /* Form */
-        .form-group {
-            margin-bottom: 25px;
-        }
-        
-        .input-with-icon {
-            position: relative;
-        }
-        
-        .input-with-icon i {
-            position: absolute;
-            left: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--primary);
-            font-size: 1.2rem;
-        }
-        
-        input[type="email"] {
-            width: 100%;
-            padding: 18px 20px 18px 55px;
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            font-size: 1rem;
-            outline: none;
-            transition: border-color 0.3s;
-        }
-        
-        input[type="email"]:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
-        }
-        
-        button {
-            width: 100%;
-            padding: 18px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
+
+        .logo-container {
+            flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: center;
+            background: white;
+            border-radius: 12px;
+            padding: 8px;
+        }
+
+        .school-logo {
+            height: clamp(60px, 12vw, 90px);
+            width: auto;
+            max-width: 100%;
+            object-fit: contain;
+        }
+
+        .school-info {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .school-name {
+            color: var(--primary);
+            font-size: clamp(1.5rem, 5vw, 2.2rem);
+            font-weight: 700;
+            margin-bottom: 8px;
+            line-height: 1.2;
+        }
+
+        .school-subtitle {
+            color: var(--gray-600);
+            font-size: clamp(0.95rem, 3vw, 1.2rem);
+            font-weight: 500;
+        }
+
+        /* ========== STATISTIQUES ========== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+            gap: clamp(16px, 3vw, 24px);
+            margin-bottom: clamp(24px, 5vw, 40px);
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: clamp(20px, 4vw, 28px);
+            box-shadow: var(--shadow);
+            border-bottom: 4px solid var(--primary);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .stat-icon {
+            font-size: clamp(2rem, 6vw, 2.5rem);
+            color: var(--primary);
+            margin-bottom: 12px;
+        }
+
+        .stat-value {
+            font-size: clamp(2rem, 8vw, 2.8rem);
+            font-weight: 700;
+            color: var(--primary);
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            color: var(--gray-600);
+            font-size: clamp(0.9rem, 3vw, 1.1rem);
+            font-weight: 500;
+        }
+
+        /* ========== SECTION EMAIL ========== */
+        .verification-card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: clamp(24px, 5vw, 36px);
+            margin-bottom: 30px;
+            box-shadow: var(--shadow);
+        }
+
+        .verification-title {
+            display: flex;
+            align-items: center;
             gap: 12px;
+            color: var(--primary);
+            font-size: clamp(1.2rem, 4vw, 1.5rem);
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .email-input-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .email-input {
+            flex: 1;
+            min-width: 250px;
+            padding: clamp(12px, 3vw, 16px);
+            border: 2px solid var(--gray-300);
+            border-radius: 12px;
+            font-size: 1rem;
             transition: all 0.3s;
         }
-        
-        button:hover:not(:disabled) {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(67, 97, 238, 0.3);
+
+        .email-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(13, 71, 161, 0.1);
         }
-        
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        /* Error Message */
-        .error-message {
-            background: rgba(255, 89, 94, 0.1);
-            border-left: 4px solid var(--danger);
-            color: var(--danger);
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-            display: none;
+
+        .btn {
+            padding: clamp(12px, 3vw, 16px) clamp(20px, 5vw, 28px);
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
             align-items: center;
-            gap: 10px;
+            justify-content: center;
+            gap: 8px;
+            white-space: nowrap;
         }
-        
-        /* Candidates */
-        .candidates-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 25px;
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-light);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(13, 71, 161, 0.3);
+        }
+
+        /* ========== CANDIDATES ========== */
+        .candidates-section {
             margin-top: 30px;
         }
-        
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--primary);
+            font-size: clamp(1.3rem, 4vw, 1.8rem);
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .candidates-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+            gap: clamp(16px, 3vw, 24px);
+        }
+
         .candidate-card {
             background: white;
+            border-radius: var(--border-radius);
+            padding: clamp(20px, 4vw, 28px);
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
             border: 2px solid transparent;
-            border-radius: 15px;
-            padding: 25px;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
         }
-        
+
         .candidate-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
             border-color: var(--primary);
+            transform: translateY(-4px);
         }
-        
-        .candidate-card.selected {
-            border-color: var(--success);
-            background: rgba(46, 204, 113, 0.05);
-        }
-        
+
         .candidate-avatar {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            width: clamp(60px, 12vw, 80px);
+            height: clamp(60px, 12vw, 80px);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            font-size: 2rem;
+            font-size: clamp(1.5rem, 4vw, 2rem);
             font-weight: bold;
-            margin: 0 auto 20px;
+            color: white;
+            margin-bottom: 16px;
         }
-        
+
         .candidate-name {
-            font-size: 1.3rem;
-            font-weight: 600;
-            color: var(--dark);
-            margin-bottom: 10px;
-            text-align: center;
+            font-size: clamp(1.2rem, 4vw, 1.4rem);
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 4px;
         }
-        
+
         .candidate-class {
-            display: inline-block;
-            background: rgba(67, 97, 238, 0.1);
             color: var(--primary);
-            padding: 8px 15px;
-            border-radius: 20px;
             font-weight: 600;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
+            font-size: clamp(0.95rem, 3vw, 1.1rem);
         }
-        
-        /* Selection Panel */
-        .selection-panel {
-            background: linear-gradient(135deg, rgba(46, 204, 113, 0.1), rgba(39, 174, 96, 0.1));
-            border: 2px solid var(--success);
-            border-radius: 15px;
-            padding: 30px;
+
+        .candidate-desc {
+            color: var(--gray-600);
+            margin-bottom: 20px;
+            line-height: 1.5;
+            flex-grow: 1;
+        }
+
+        /* ========== CONFIRMATION ========== */
+        .confirmation-card {
+            background: #e8f5e9;
+            border-radius: var(--border-radius);
+            padding: clamp(24px, 5vw, 36px);
             margin-top: 30px;
+            border-left: 6px solid var(--success);
+        }
+
+        .confirmation-title {
+            color: var(--success);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: clamp(1.2rem, 4vw, 1.6rem);
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        /* ========== ✅ LIEN ADMIN (VISIBLE EN BAS) ========== */
+        .admin-footer {
+            margin-top: 50px;
+            padding: 20px;
+            border-top: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .admin-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 28px;
+            background: var(--gray-100);
+            color: var(--gray-600);
+            border-radius: 50px;
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            border: 1px solid var(--gray-300);
+            transition: all 0.3s ease;
+        }
+
+        .admin-link:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(13, 71, 161, 0.2);
+        }
+
+        .admin-link i {
+            font-size: 1.1rem;
+        }
+
+        /* ========== MESSAGES ========== */
+        .message {
+            padding: 16px;
+            border-radius: 12px;
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+        }
+
+        .message-success {
+            background: #e8f5e9;
+            color: var(--success);
+            border-left: 4px solid var(--success);
+        }
+
+        .message-error {
+            background: #ffebee;
+            color: var(--danger);
+            border-left: 4px solid var(--danger);
+        }
+
+        .hidden {
             display: none;
         }
-        
-        /* Confirmation */
-        .confirmation-box {
-            text-align: center;
-            padding: 40px;
-        }
-        
-        .success-icon {
-            font-size: 4rem;
-            color: var(--success);
-            margin-bottom: 20px;
-        }
-        
-        /* Footer */
-        .footer {
-            text-align: center;
-            padding: 30px;
-            background: var(--light);
-            color: var(--gray);
-            border-top: 1px solid #e9ecef;
-        }
-        
-        /* Responsive */
+
+        /* ========== RESPONSIVE ========== */
         @media (max-width: 768px) {
-            .container {
-                border-radius: 10px;
+            .hero {
+                flex-direction: column;
+                text-align: center;
             }
             
-            .header {
-                padding: 30px 20px;
+            .email-input-group {
+                flex-direction: column;
             }
             
-            h1 {
-                font-size: 2rem;
+            .btn {
+                width: 100%;
             }
             
-            .stats {
-                grid-template-columns: 1fr;
+            .candidate-card {
+                text-align: center;
+            }
+            
+            .candidate-avatar {
+                margin-left: auto;
+                margin-right: auto;
+            }
+            
+            .admin-link {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .overlay {
+                padding: 12px;
+            }
+            
+            .hero {
                 padding: 20px;
             }
             
-            .main-content {
-                padding: 30px 20px;
+            .admin-link {
+                padding: 10px 20px;
+                font-size: 0.9rem;
             }
-            
-            .candidates-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .admin-btn {
-                position: static;
-                margin-top: 20px;
-                display: inline-flex;
-            }
+        }
+
+        /* ========== ANIMATIONS ========== */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.4s ease-out;
         }
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <div class="container">
-        <!-- Header avec bouton Admin -->
-        <header class="header">
-            <a href="/admin-login" class="admin-btn">
-                <i class="fas fa-lock"></i>
-                <span>ESPACE ADMIN</span>
-            </a>
-            
-            <div class="logo">🗳️</div>
-            <h1>Élections Délégués 2026</h1>
-            <p class="subtitle">Cours privés La Source de la Fontaine</p>
-        </header>
-        
-        <!-- Stats -->
-        <div class="stats">
-            <div class="stat-card">
-                <i class="fas fa-clock"></i>
-                <h3 id="timeRemaining">4j 12h</h3>
-                <p>Temps restant</p>
+    <div class="overlay">
+        <div class="container">
+            <!-- HEADER AVEC LOGO FONTAINE -->
+            <header class="hero fade-in">
+                <div class="logo-container">
+                    <img src="/assets/fontaine.png" 
+                         alt="Logo La Source de la Fontaine" 
+                         class="school-logo"
+                         loading="eager">
+                </div>
+                <div class="school-info">
+                    <h1 class="school-name">Cours privés La Source de la Fontaine</h1>
+                    <p class="school-subtitle">
+                        <i class="fas fa-graduation-cap"></i> 
+                        Élection des Délégués Élèves 2026
+                    </p>
+                </div>
+            </header>
+
+            <!-- STATISTIQUES -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-value" id="tempsRestant">-</div>
+                    <div class="stat-label">Temps restant</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-vote-yea"></i>
+                    </div>
+                    <div class="stat-value" id="totalVotes">0</div>
+                    <div class="stat-label">Votes enregistrés</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-value" id="tauxParticipation">0%</div>
+                    <div class="stat-label">Taux de participation</div>
+                </div>
             </div>
-            <div class="stat-card">
-                <i class="fas fa-users"></i>
-                <h3 id="votesCount">0</h3>
-                <p>Votes enregistrés</p>
-            </div>
-            <div class="stat-card">
-                <i class="fas fa-chart-line"></i>
-                <h3 id="participationRate">0%</h3>
-                <p>Taux de participation</p>
-            </div>
-        </div>
-        
-        <!-- Status Message -->
-        <div style="padding: 20px 40px; background: #e9ecef; font-weight: 600;">
-            <i class="fas fa-info-circle" style="color: var(--primary); margin-right: 10px;"></i>
-            <span id="statusMessage">Système de vote prêt</span>
-        </div>
-        
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Email Section -->
-            <section id="emailSection" class="section active">
-                <h2><i class="fas fa-envelope"></i> Vérification d'identité</h2>
-                <p style="color: var(--gray); margin-bottom: 25px;">
+
+            <!-- VÉRIFICATION EMAIL -->
+            <div class="verification-card fade-in">
+                <h2 class="verification-title">
+                    <i class="fas fa-shield-alt"></i>
+                    Vérification d'identité
+                </h2>
+                <p style="color: var(--gray-600); margin-bottom: 20px;">
                     Saisissez votre email professionnel pour accéder au vote
                 </p>
-                
-                <div class="form-group">
-                    <div class="input-with-icon">
-                        <i class="fas fa-envelope"></i>
-                        <input type="email" 
-                               id="emailInput" 
-                               placeholder="votre.email@lasourcedelafontaine.fr"
-                               autocomplete="email">
-                    </div>
+                <div class="email-input-group">
+                    <input type="email" 
+                           id="emailInput" 
+                           class="email-input"
+                           placeholder="prenom.nom@lasourcefontaine.com"
+                           autocomplete="off"
+                           aria-label="Adresse email professionnelle">
+                    <button onclick="verifierEmail()" class="btn btn-primary">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Vérifier</span>
+                    </button>
                 </div>
-                
-                <div class="error-message" id="emailError">
-                    <i class="fas fa-exclamation-circle"></i>
-                    <span>Message d'erreur</span>
-                </div>
-                
-                <button onclick="verifyEmail()">
+                <div id="emailMessage" class="message" style="display: none;"></div>
+            </div>
+
+            <!-- SECTION CANDIDATES -->
+            <div id="candidatesSection" class="candidates-section hidden">
+                <h2 class="section-title">
+                    <i class="fas fa-users"></i>
+                    Choisissez votre candidate
+                </h2>
+                <div id="candidatesContainer" class="candidates-grid"></div>
+            </div>
+
+            <!-- CONFIRMATION VOTE -->
+            <div id="confirmationSection" class="confirmation-card hidden">
+                <h2 class="confirmation-title">
+                    <i class="fas fa-check-circle"></i>
+                    Vote enregistré avec succès !
+                </h2>
+                <div id="confirmationDetails" style="background: white; padding: 20px; border-radius: 12px;"></div>
+                <p style="margin-top: 16px; color: var(--gray-600);">
+                    <i class="fas fa-lock"></i> 
+                    Votre vote est confidentiel et sécurisé
+                </p>
+            </div>
+
+            <!-- ✅ LIEN ADMIN VISIBLE ICI - TOUT EN BAS -->
+            <div class="admin-footer">
+                <a href="/admin-login" class="admin-link">
                     <i class="fas fa-shield-alt"></i>
-                    <span>VÉRIFIER MON IDENTITÉ</span>
-                </button>
-                
-                <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
-                    <h4><i class="fas fa-lock" style="color: var(--primary);"></i> Sécurité & Confidentialité</h4>
-                    <p style="color: var(--gray); margin-top: 10px;">
-                        Votre vote est entièrement anonyme et sécurisé. 
-                        L'administration ne peut pas voir votre choix individuel.
-                    </p>
-                </div>
-            </section>
-            
-            <!-- Candidates Section -->
-            <section id="candidatesSection" class="section">
-                <h2><i class="fas fa-user-graduate"></i> Choix de votre candidate</h2>
-                <p style="color: var(--gray); margin-bottom: 20px;">
-                    Sélectionnez une candidate parmi la liste ci-dessous
-                </p>
-                
-                <!-- Filters -->
-                <div style="display: flex; gap: 10px; margin-bottom: 25px; flex-wrap: wrap;">
-                    <button onclick="filterCandidates('all')" class="filter-btn" style="background: var(--primary); color: white; padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer;">
-                        Toutes
-                    </button>
-                    <button onclick="filterCandidates('2nde')" class="filter-btn" style="background: #e9ecef; color: var(--dark); padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer;">
-                        2nde
-                    </button>
-                    <button onclick="filterCandidates('3ème')" class="filter-btn" style="background: #e9ecef; color: var(--dark); padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer;">
-                        3ème
-                    </button>
-                    <button onclick="filterCandidates('4ème')" class="filter-btn" style="background: #e9ecef; color: var(--dark); padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer;">
-                        4ème
-                    </button>
-                    <button onclick="filterCandidates('5ème')" class="filter-btn" style="background: #e9ecef; color: var(--dark); padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer;">
-                        5ème
-                    </button>
-                    <button onclick="filterCandidates('6ème')" class="filter-btn" style="background: #e9ecef; color: var(--dark); padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer;">
-                        6ème
-                    </button>
-                </div>
-                
-                <!-- Candidates Grid -->
-                <div class="candidates-grid" id="candidatesGrid">
-                    <!-- Candidates loaded here -->
-                </div>
-                
-                <!-- Selected Candidate -->
-                <div class="selection-panel" id="selectedCandidate">
-                    <h3><i class="fas fa-check-circle" style="color: var(--success);"></i> Votre sélection</h3>
-                    <div id="selectedInfo" style="margin: 20px 0;"></div>
-                    <button onclick="showConfirmationModal()" id="voteBtn" disabled style="margin-bottom: 15px;">
-                        <i class="fas fa-vote-yea"></i>
-                        <span>CONFIRMER MON VOTE</span>
-                    </button>
-                    <button onclick="clearSelection()" style="background: #e9ecef; color: var(--dark);">
-                        <i class="fas fa-sync-alt"></i>
-                        <span>MODIFIER LA SÉLECTION</span>
-                    </button>
-                </div>
-            </section>
-            
-            <!-- Already Voted Section -->
-            <section id="alreadyVotedSection" class="section">
-                <div class="confirmation-box">
-                    <div class="success-icon">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                    <h2>Participation validée</h2>
-                    <p style="color: var(--gray); margin: 20px 0;">
-                        Merci pour votre contribution à l'élection 2026.
-                    </p>
-                    <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin: 20px 0;">
-                        <p id="voteTimestamp" style="font-weight: 600; color: var(--dark);">
-                            Vote enregistré le --/--/---- à --:--
-                        </p>
-                    </div>
-                </div>
-            </section>
-            
-            <!-- Confirmation Section -->
-            <section id="confirmationSection" class="section">
-                <div class="confirmation-box">
-                    <div class="success-icon">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                    <h2>Vote enregistré avec succès !</h2>
-                    <p style="color: var(--gray); margin: 20px 0;">
-                        Votre participation à l'élection des délégués a été validée.
-                    </p>
-                    
-                    <div style="background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin: 25px 0;">
-                        <p style="margin-bottom: 15px; display: flex; justify-content: space-between;">
-                            <strong>Votre email :</strong>
-                            <span id="confirmationEmail" style="color: var(--primary);"></span>
-                        </p>
-                        <p style="margin-bottom: 15px; display: flex; justify-content: space-between;">
-                            <strong>Date et heure :</strong>
-                            <span id="confirmationTime"></span>
-                        </p>
-                        <p style="display: flex; justify-content: space-between;">
-                            <strong>Identifiant unique :</strong>
-                            <span id="confirmationId" style="background: var(--dark); color: white; padding: 5px 10px; border-radius: 5px; font-family: monospace;"></span>
-                        </p>
-                    </div>
-                    
-                    <button onclick="logout()">
-                        <i class="fas fa-sign-out-alt"></i>
-                        <span>TERMINER LA SESSION</span>
-                    </button>
-                </div>
-            </section>
-        </div>
-        
-        <!-- Footer -->
-        <footer class="footer">
-            <p>© 2026 - Cours privés La Source de la Fontaine</p>
-            <p>Système de vote électronique sécurisé</p>
-            <p style="margin-top: 15px;">
-                <a href="/admin-login" style="color: var(--primary); text-decoration: none; font-weight: 600;">
-                    <i class="fas fa-lock"></i> Accès administration
+                    Espace administration
+                    <i class="fas fa-arrow-right"></i>
                 </a>
-            </p>
-        </footer>
-    </div>
-    
-    <!-- Confirmation Modal -->
-    <div id="confirmationModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 1000; padding: 20px;">
-        <div style="background: white; padding: 30px; border-radius: 15px; max-width: 500px; width: 100%;">
-            <h3 style="color: var(--dark); margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                <i class="fas fa-shield-alt" style="color: var(--primary);"></i>
-                Confirmation finale
-            </h3>
-            <p>Vous êtes sur le point de voter pour :</p>
-            <div id="confirmCandidate" style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 10px;"></div>
-            <div style="background: rgba(255, 158, 0, 0.1); border-left: 4px solid var(--warning); padding: 15px; border-radius: 8px; margin: 20px 0;">
-                <i class="fas fa-exclamation-triangle" style="color: var(--warning); margin-right: 10px;"></i>
-                <span style="font-weight: 600;">Action irréversible</span>
-                <p style="margin-top: 5px; color: var(--dark);">
-                    Vous ne pourrez pas modifier votre vote après confirmation.
-                </p>
-            </div>
-            <div style="display: flex; gap: 15px;">
-                <button onclick="hideModal()" style="flex: 1; padding: 15px; background: #e9ecef; color: var(--dark); border: none; border-radius: 8px; cursor: pointer;">
-                    <i class="fas fa-times"></i> Annuler
-                </button>
-                <button onclick="submitVote()" style="flex: 1; padding: 15px; background: var(--success); color: white; border: none; border-radius: 8px; cursor: pointer;">
-                    <i class="fas fa-check"></i> Confirmer
-                </button>
             </div>
         </div>
     </div>
-    
-    <!-- Loader -->
-    <div id="loader" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.9); align-items: center; justify-content: center; z-index: 2000;">
-        <div style="text-align: center;">
-            <div style="width: 60px; height: 60px; border: 5px solid #f3f3f3; border-top: 5px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
-            <p id="loaderMessage" style="font-weight: 600; color: var(--dark);">Chargement...</p>
-        </div>
-    </div>
-    
+
     <script>
-        // ==================== CONFIGURATION ====================
-        const API_BASE_URL = window.location.origin;
-        console.log('🌐 URL API:', API_BASE_URL);
+        // ========== CONFIGURATION ==========
+        const AVATAR_COLORS = ['#0d47a1', '#1565c0', '#1976d2', '#1e88e5', '#2196f3'];
         
-        const API_ENDPOINTS = {
-            election: `${API_BASE_URL}/api/election`,
-            vote: `${API_BASE_URL}/api/vote`,
-            verify: `${API_BASE_URL}/api/verify-email`,
-            status: `${API_BASE_URL}/api/status`
-        };
-        
-        // ==================== VARIABLES GLOBALES ====================
-        let candidates = [];
-        let selectedCandidateId = null;
-        let userEmail = null;
-        let hasVoted = false;
-        
-        // ==================== ÉLÉMENTS DOM ====================
-        const elements = {
-            // Sections
-            emailSection: document.getElementById('emailSection'),
-            candidatesSection: document.getElementById('candidatesSection'),
-            alreadyVotedSection: document.getElementById('alreadyVotedSection'),
-            confirmationSection: document.getElementById('confirmationSection'),
+        // ========== INITIALISATION ==========
+        document.addEventListener('DOMContentLoaded', function() {
+            chargerStatistiques();
+            chargerCandidates();
             
-            // Email
-            emailInput: document.getElementById('emailInput'),
-            emailError: document.getElementById('emailError'),
-            
-            // Stats
-            timeRemaining: document.getElementById('timeRemaining'),
-            votesCount: document.getElementById('votesCount'),
-            participationRate: document.getElementById('participationRate'),
-            statusMessage: document.getElementById('statusMessage'),
-            
-            // Candidates
-            candidatesGrid: document.getElementById('candidatesGrid'),
-            selectedCandidate: document.getElementById('selectedCandidate'),
-            selectedInfo: document.getElementById('selectedInfo'),
-            voteBtn: document.getElementById('voteBtn'),
-            
-            // Confirmation
-            voteTimestamp: document.getElementById('voteTimestamp'),
-            confirmationEmail: document.getElementById('confirmationEmail'),
-            confirmationTime: document.getElementById('confirmationTime'),
-            confirmationId: document.getElementById('confirmationId'),
-            
-            // Modals
-            confirmationModal: document.getElementById('confirmationModal'),
-            confirmCandidate: document.getElementById('confirmCandidate'),
-            
-            // Loader
-            loader: document.getElementById('loader'),
-            loaderMessage: document.getElementById('loaderMessage')
-        };
-        
-        // ==================== INITIALISATION ====================
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('🚀 Système de vote initialisé');
-            
-            // Cacher les messages d'erreur
-            elements.emailError.style.display = 'none';
-            
-            // Vérifier si l'utilisateur a déjà voté
-            checkPreviousVote();
-            
-            // Charger les statistiques
-            loadStats();
-            
-            // Focus sur le champ email
-            setTimeout(() => {
-                if (elements.emailInput) {
-                    elements.emailInput.focus();
-                }
-            }, 500);
+            // Auto-refresh toutes les 30 secondes
+            setInterval(chargerStatistiques, 30000);
         });
-        
-        // ==================== FONCTIONS UTILITAIRES ====================
-        function showLoader(message) {
-            if (elements.loaderMessage) {
-                elements.loaderMessage.textContent = message;
-            }
-            elements.loader.style.display = 'flex';
-        }
-        
-        function hideLoader() {
-            elements.loader.style.display = 'none';
-        }
-        
-        function showSection(sectionId) {
-            // Cacher toutes les sections
-            document.querySelectorAll('.section').forEach(section => {
-                section.classList.remove('active');
-            });
-            
-            // Afficher la section demandée
-            const section = document.getElementById(sectionId);
-            if (section) {
-                section.classList.add('active');
-                window.scrollTo(0, 0);
-            }
-        }
-        
-        function showError(message) {
-            if (elements.emailError) {
-                elements.emailError.querySelector('span').textContent = message;
-                elements.emailError.style.display = 'flex';
-                
-                // Animation
-                elements.emailError.style.opacity = '0';
-                elements.emailError.style.transform = 'translateY(-10px)';
-                
-                setTimeout(() => {
-                    elements.emailError.style.transition = 'all 0.3s ease';
-                    elements.emailError.style.opacity = '1';
-                    elements.emailError.style.transform = 'translateY(0)';
-                }, 10);
-            }
-        }
-        
-        function hideError() {
-            if (elements.emailError) {
-                elements.emailError.style.display = 'none';
-            }
-        }
-        
-        function updateStatus(message) {
-            if (elements.statusMessage) {
-                elements.statusMessage.textContent = message;
-            }
-        }
-        
-        // ==================== GESTION UTILISATEUR ====================
-        function checkPreviousVote() {
-            const savedEmail = localStorage.getItem('vote_email_2026');
-            const savedHasVoted = localStorage.getItem('has_voted_2026');
-            
-            if (savedEmail && savedHasVoted === 'true') {
-                userEmail = savedEmail;
-                hasVoted = true;
-                showSection('alreadyVotedSection');
-                
-                // Mettre à jour la date du vote
-                const savedTimestamp = localStorage.getItem('vote_timestamp_2026');
-                if (elements.voteTimestamp && savedTimestamp) {
-                    const date = new Date(savedTimestamp);
-                    elements.voteTimestamp.textContent = `Vote enregistré le ${date.toLocaleDateString('fr-FR')} à ${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
-                }
-                
-                updateStatus('✅ Vous avez déjà voté');
-            }
-        }
-        
-        function saveVote(email, timestamp) {
-            localStorage.setItem('vote_email_2026', email);
-            localStorage.setItem('has_voted_2026', 'true');
-            localStorage.setItem('vote_timestamp_2026', timestamp || new Date().toISOString());
-        }
-        
-        function clearUserSession() {
-            userEmail = null;
-            hasVoted = false;
-            selectedCandidateId = null;
-            
-            localStorage.removeItem('vote_email_2026');
-            localStorage.removeItem('has_voted_2026');
-            localStorage.removeItem('vote_timestamp_2026');
-            localStorage.removeItem('vote_candidate_id_2026');
-            
-            if (elements.emailInput) {
-                elements.emailInput.value = '';
-            }
-        }
-        
-        // ==================== GESTION EMAIL ====================
-        async function verifyEmail() {
-            const email = elements.emailInput.value.trim().toLowerCase();
-            
-            // Validation
-            if (!email) {
-                showError('Veuillez entrer votre email');
-                return;
-            }
-            
-            if (!email.includes('@') || !email.includes('.')) {
-                showError('Format d\'email invalide');
-                return;
-            }
-            
-            userEmail = email;
-            showLoader('Vérification en cours...');
-            
+
+        // ========== CHARGER STATISTIQUES ==========
+        async function chargerStatistiques() {
             try {
-                const response = await fetch(API_ENDPOINTS.verify, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ email: email })
-                });
+                const response = await fetch('/api/status');
+                if (!response.ok) throw new Error('Erreur réseau');
                 
                 const data = await response.json();
                 
-                if (data.error) {
-                    showError(data.error);
-                    updateStatus('❌ Erreur de vérification');
-                    return;
-                }
-                
-                if (data.has_voted) {
-                    // Déjà voté
-                    saveVote(email, data.vote_date);
-                    hasVoted = true;
-                    showSection('alreadyVotedSection');
-                    updateStatus('✅ Vous avez déjà voté');
-                } else if (data.can_vote) {
-                    // Peut voter
-                    await loadCandidates();
-                    showSection('candidatesSection');
-                    updateStatus('✅ Email validé • Sélectionnez une candidate');
-                } else {
-                    showError(data.message || 'Impossible de voter actuellement');
-                    updateStatus('⏸️ Vote non disponible');
-                }
-                
-                hideError();
-                
-            } catch (error) {
-                console.error('Erreur vérification:', error);
-                showError('Erreur de connexion au serveur');
-                updateStatus('❌ Erreur de connexion');
-            } finally {
-                hideLoader();
-            }
-        }
-        
-        // ==================== GESTION CANDIDATES ====================
-        async function loadCandidates() {
-            showLoader('Chargement des candidates...');
-            
-            try {
-                const response = await fetch(API_ENDPOINTS.election);
-                const data = await response.json();
-                
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-                
-                candidates = data.candidates || [];
-                displayCandidates(candidates);
-                
-            } catch (error) {
-                console.error('Erreur chargement candidates:', error);
-                showError('Impossible de charger les candidates');
-                showSection('emailSection');
-            } finally {
-                hideLoader();
-            }
-        }
-        
-        function displayCandidates(candidatesList) {
-            if (!elements.candidatesGrid) return;
-            
-            elements.candidatesGrid.innerHTML = '';
-            
-            // Trier par classe
-            const classOrder = ['2nde', '3ème', '4ème', '5ème', '6ème'];
-            candidatesList.sort((a, b) => {
-                return classOrder.indexOf(a.classe) - classOrder.indexOf(b.classe);
-            });
-            
-            candidatesList.forEach(candidate => {
-                const card = document.createElement('div');
-                card.className = 'candidate-card';
-                card.dataset.id = candidate.id;
-                card.dataset.classe = candidate.classe;
-                
-                // Initiales pour l'avatar
-                const initials = getInitials(candidate.prenom, candidate.nom);
-                
-                card.innerHTML = `
-                    <div class="candidate-avatar">${initials}</div>
-                    <h3 class="candidate-name">${candidate.prenom} ${candidate.nom}</h3>
-                    <div class="candidate-class">Classe : ${candidate.classe}</div>
-                    <p style="color: var(--gray); margin-top: 15px; font-size: 0.95rem;">
-                        ${candidate.description || 'Candidate engagée'}
-                    </p>
-                    <button onclick="selectCandidate(${candidate.id})" style="margin-top: 20px; width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer;">
-                        <i class="fas fa-check-circle"></i> Sélectionner
-                    </button>
-                `;
-                
-                elements.candidatesGrid.appendChild(card);
-            });
-        }
-        
-        function getInitials(firstName, lastName) {
-            if (!firstName || !lastName) return '??';
-            return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
-        }
-        
-        function selectCandidate(candidateId) {
-            // Désélectionner toutes les cartes
-            document.querySelectorAll('.candidate-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-            
-            // Sélectionner la carte cliquée
-            const selectedCard = document.querySelector(`.candidate-card[data-id="${candidateId}"]`);
-            if (selectedCard) {
-                selectedCard.classList.add('selected');
-            }
-            
-            selectedCandidateId = candidateId;
-            const candidate = candidates.find(c => c.id === candidateId);
-            
-            if (candidate) {
-                const initials = getInitials(candidate.prenom, candidate.nom);
-                
-                elements.selectedInfo.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 20px;">
-                        <div style="width: 60px; height: 60px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; font-weight: bold;">
-                            ${initials}
-                        </div>
-                        <div>
-                            <h4 style="margin-bottom: 5px;">${candidate.prenom} ${candidate.nom}</h4>
-                            <div style="background: rgba(67, 97, 238, 0.1); color: var(--primary); padding: 5px 10px; border-radius: 15px; display: inline-block; font-weight: 600;">
-                                Classe : ${candidate.classe}
-                            </div>
-                        </div>
-                    </div>
-                    <p style="margin-top: 15px; color: var(--gray);">
-                        ${candidate.description || 'Votre sélection'}
-                    </p>
-                    <div style="margin-top: 20px; padding: 15px; background: rgba(46, 204, 113, 0.1); border-radius: 10px; color: var(--success); font-weight: 600;">
-                        <i class="fas fa-check-circle"></i> Prêt à voter pour cette candidate
-                    </div>
-                `;
-                
-                elements.selectedCandidate.style.display = 'block';
-                elements.voteBtn.disabled = false;
-            }
-        }
-        
-        function filterCandidates(classe) {
-            // Mettre à jour les boutons de filtre
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.style.background = '#e9ecef';
-                btn.style.color = 'var(--dark)';
-            });
-            
-            // Activer le bouton cliqué
-            event.target.style.background = 'var(--primary)';
-            event.target.style.color = 'white';
-            
-            // Filtrer les candidates
-            if (classe === 'all') {
-                displayCandidates(candidates);
-            } else {
-                const filtered = candidates.filter(c => c.classe === classe);
-                displayCandidates(filtered);
-            }
-        }
-        
-        function clearSelection() {
-            selectedCandidateId = null;
-            
-            document.querySelectorAll('.candidate-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-            
-            elements.selectedCandidate.style.display = 'none';
-            elements.voteBtn.disabled = true;
-        }
-        
-        // ==================== GESTION VOTE ====================
-        function showConfirmationModal() {
-            if (!selectedCandidateId || !userEmail) {
-                showError('Veuillez sélectionner une candidate');
-                return;
-            }
-            
-            const candidate = candidates.find(c => c.id === selectedCandidateId);
-            if (!candidate) return;
-            
-            const initials = getInitials(candidate.prenom, candidate.nom);
-            
-            elements.confirmCandidate.innerHTML = `
-                <div style="text-align: center;">
-                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 2rem; font-weight: bold; margin: 0 auto 20px;">
-                        ${initials}
-                    </div>
-                    <h4 style="margin-bottom: 10px;">${candidate.prenom} ${candidate.nom}</h4>
-                    <div style="background: rgba(67, 97, 238, 0.1); color: var(--primary); padding: 8px 15px; border-radius: 20px; display: inline-block; font-weight: 600; margin-bottom: 15px;">
-                        Classe : ${candidate.classe}
-                    </div>
-                    <p style="color: var(--gray); margin: 15px 0;">${candidate.description || ''}</p>
-                    <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-top: 20px;">
-                        <p style="margin-bottom: 10px;"><strong>Email :</strong> ${userEmail}</p>
-                        <p><strong>Date :</strong> ${new Date().toLocaleString('fr-FR')}</p>
-                    </div>
-                </div>
-            `;
-            
-            elements.confirmationModal.style.display = 'flex';
-        }
-        
-        function hideModal() {
-            elements.confirmationModal.style.display = 'none';
-        }
-        
-        async function submitVote() {
-            if (!selectedCandidateId || !userEmail) return;
-            
-            showLoader('Enregistrement de votre vote...');
-            hideModal();
-            
-            try {
-                const response = await fetch(API_ENDPOINTS.vote, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        professeur_email: userEmail,
-                        candidate_id: selectedCandidateId
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-                
-                // Succès
-                hasVoted = true;
-                saveVote(userEmail, data.timestamp);
-                localStorage.setItem('vote_candidate_id_2026', selectedCandidateId.toString());
-                
-                // Afficher les détails de confirmation
-                elements.confirmationEmail.textContent = userEmail;
-                elements.confirmationTime.textContent = new Date().toLocaleString('fr-FR');
-                elements.confirmationId.textContent = data.confirmation_id || `VOTE-${Date.now()}`;
-                
-                showSection('confirmationSection');
-                updateStatus('✅ Vote enregistré avec succès !');
-                
-                // Recharger les statistiques après un délai
-                setTimeout(loadStats, 2000);
-                
-            } catch (error) {
-                console.error('Erreur vote:', error);
-                
-                if (error.message.includes('déjà voté')) {
-                    // L'utilisateur a déjà voté
-                    saveVote(userEmail);
-                    hasVoted = true;
-                    showSection('alreadyVotedSection');
-                    updateStatus('✅ Vous avez déjà voté');
-                } else {
-                    showError('Erreur d\'enregistrement: ' + error.message);
-                    updateStatus('❌ Erreur de vote');
-                }
-            } finally {
-                hideLoader();
-            }
-        }
-        
-        // ==================== GESTION STATISTIQUES ====================
-        async function loadStats() {
-            try {
-                const response = await fetch(API_ENDPOINTS.status);
-                const data = await response.json();
-                
-                if (data.error) return;
-                
-                // Mettre à jour le temps restant
-                if (elements.timeRemaining && data.election?.temps_restant) {
-                    elements.timeRemaining.textContent = data.election.temps_restant;
-                }
-                
-                // Mettre à jour le nombre de votes
-                if (elements.votesCount && data.statistics?.votes) {
-                    elements.votesCount.textContent = data.statistics.votes;
-                }
-                
-                // Mettre à jour le taux de participation
-                if (elements.participationRate && data.statistics?.participation_rate) {
-                    elements.participationRate.textContent = `${data.statistics.participation_rate}%`;
-                }
-                
-                // Mettre à jour le statut
-                if (data.election?.can_vote) {
-                    updateStatus('🗳️ Vote en cours • ' + (data.election.temps_restant || ''));
-                }
-                
+                document.getElementById('tempsRestant').textContent = 
+                    data.election.temps_restant || 'En cours';
+                document.getElementById('totalVotes').textContent = 
+                    data.statistics.votes || 0;
+                document.getElementById('tauxParticipation').textContent = 
+                    (data.statistics.participation_rate || 0) + '%';
+                    
             } catch (error) {
                 console.error('Erreur chargement stats:', error);
             }
         }
-        
-        // ==================== AUTRES FONCTIONS ====================
-        function logout() {
-            clearUserSession();
-            clearSelection();
-            showSection('emailSection');
-            updateStatus('Système de vote prêt');
+
+        // ========== CHARGER CANDIDATES ==========
+        async function chargerCandidates() {
+            try {
+                const response = await fetch('/api/election');
+                if (!response.ok) throw new Error('Erreur réseau');
+                
+                const data = await response.json();
+                const container = document.getElementById('candidatesContainer');
+                
+                if (!data.candidates || data.candidates.length === 0) {
+                    container.innerHTML = '<p style="color: var(--gray-600);">Aucune candidate disponible</p>';
+                    return;
+                }
+                
+                container.innerHTML = data.candidates.map((candidate, index) => `
+                    <div class="candidate-card fade-in">
+                        <div class="candidate-avatar" 
+                             style="background: ${AVATAR_COLORS[index % AVATAR_COLORS.length]}">
+                            ${candidate.initials || candidate.prenom[0] + candidate.nom[0]}
+                        </div>
+                        <h3 class="candidate-name">${candidate.nom_complet || candidate.prenom + ' ' + candidate.nom}</h3>
+                        <p class="candidate-class">${candidate.classe}</p>
+                        <p class="candidate-desc">${candidate.description || 'Candidate pour les élections 2026'}</p>
+                        <button onclick="voter(${candidate.id})" class="btn btn-primary">
+                            <i class="fas fa-vote-yea"></i>
+                            Voter pour cette candidate
+                        </button>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Erreur chargement candidates:', error);
+            }
         }
-        
-        // ==================== ÉVÉNEMENTS ====================
-        
-        // Fermer la modal en cliquant en dehors
-        document.addEventListener('click', (e) => {
-            if (e.target === elements.confirmationModal) {
-                hideModal();
+
+        // ========== VÉRIFIER EMAIL ==========
+        async function verifierEmail() {
+            const email = document.getElementById('emailInput').value.trim();
+            const messageDiv = document.getElementById('emailMessage');
+            
+            if (!email || !email.includes('@') || !email.includes('.')) {
+                messageDiv.style.display = 'flex';
+                messageDiv.className = 'message message-error';
+                messageDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i> Veuillez entrer un email valide';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/verify-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+
+                const data = await response.json();
+
+                if (data.can_vote) {
+                    document.getElementById('candidatesSection').classList.remove('hidden');
+                    messageDiv.style.display = 'flex';
+                    messageDiv.className = 'message message-success';
+                    messageDiv.innerHTML = '<i class="fas fa-check-circle"></i> ✅ Vous pouvez voter ! Sélectionnez votre candidate.';
+                    
+                    document.getElementById('candidatesSection').scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center' 
+                    });
+                } else {
+                    messageDiv.style.display = 'flex';
+                    messageDiv.className = 'message message-error';
+                    messageDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${data.message || 'Vous avez déjà voté ou l\'élection est terminée'}`;
+                }
+                
+            } catch (error) {
+                messageDiv.style.display = 'flex';
+                messageDiv.className = 'message message-error';
+                messageDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erreur de vérification';
+            }
+        }
+
+        // ========== VOTER ==========
+        async function voter(candidateId) {
+            const email = document.getElementById('emailInput').value.trim();
+            
+            if (!email) {
+                alert('Veuillez d\'abord vérifier votre email');
+                document.getElementById('emailInput').focus();
+                return;
+            }
+
+            if (!confirm('Confirmez-vous votre vote ? Cette action est irréversible.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/vote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        professeur_email: email,
+                        candidate_id: candidateId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const detailsDiv = document.getElementById('confirmationDetails');
+                    detailsDiv.innerHTML = `
+                        <div style="display: grid; gap: 12px;">
+                            <p><strong>🗳️ Candidate :</strong> ${data.candidate}</p>
+                            <p><strong>📚 Classe :</strong> ${data.classe}</p>
+                            <p><strong>🔑 Confirmation :</strong> ${data.confirmation_id}</p>
+                            <p><strong>📅 Date :</strong> ${new Date().toLocaleString('fr-FR')}</p>
+                        </div>
+                    `;
+                    
+                    document.getElementById('confirmationSection').classList.remove('hidden');
+                    document.getElementById('candidatesSection').classList.add('hidden');
+                    chargerStatistiques();
+                    confirmationDiv.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    alert('Erreur : ' + (data.error || 'Impossible d\'enregistrer le vote'));
+                }
+                
+            } catch (error) {
+                alert('Erreur lors du vote');
+            }
+        }
+
+        // ========== GESTION TOUCHE ENTRÉE ==========
+        document.getElementById('emailInput')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                verifierEmail();
             }
         });
-        
-        // Entrée pour valider l'email
-        if (elements.emailInput) {
-            elements.emailInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    verifyEmail();
-                }
-            });
-        }
-        
-        // ==================== EXPORT GLOBAL ====================
-        window.verifyEmail = verifyEmail;
-        window.selectCandidate = selectCandidate;
-        window.filterCandidates = filterCandidates;
-        window.clearSelection = clearSelection;
-        window.showConfirmationModal = showConfirmationModal;
-        window.hideModal = hideModal;
-        window.submitVote = submitVote;
-        window.logout = logout;
-        
-        console.log('✅ Interface de vote prête');
+
+        // ========== NETTOYAGE MESSAGES ==========
+        document.getElementById('emailInput')?.addEventListener('focus', function() {
+            const messageDiv = document.getElementById('emailMessage');
+            messageDiv.style.display = 'none';
+        });
     </script>
 </body>
 </html>
