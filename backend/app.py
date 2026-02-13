@@ -65,6 +65,17 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 
 db = SQLAlchemy(app)
 
+# ==================== INITIALISATION DES TABLES POSTGRESQL ====================
+with app.app_context():
+    try:
+        print("🔧 Création des tables PostgreSQL...")
+        db.create_all()
+        print("✅ Tables créées avec succès !")
+    except Exception as e:
+        print(f"❌ Erreur lors de la création des tables : {e}")
+        import traceback
+        traceback.print_exc()
+
 # ==================== MODÈLES DE BASE DE DONNÉES ====================
 
 class Election(db.Model):
