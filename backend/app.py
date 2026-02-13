@@ -65,14 +65,29 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 
 db = SQLAlchemy(app)
 
-# ==================== INITIALISATION DES TABLES POSTGRESQL ====================
+# ==================== FORCE LA CRÉATION DES TABLES ====================
 with app.app_context():
     try:
-        print("🔧 Création des tables PostgreSQL...")
+        print("=" * 50)
+        print("🔧 CRÉATION FORCÉE DES TABLES POSTGRESQL")
+        print("=" * 50)
+        
+        # Supprimer les tables existantes (optionnel - à utiliser avec précaution)
+        # db.drop_all()
+        # print("✅ Tables existantes supprimées")
+        
+        # Créer les tables
         db.create_all()
         print("✅ Tables créées avec succès !")
+        
+        # Vérifier que les tables existent
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        print(f"📊 Tables dans la base : {tables}")
+        
     except Exception as e:
-        print(f"❌ Erreur lors de la création des tables : {e}")
+        print(f"❌ ERREUR CRITIQUE : {e}")
         import traceback
         traceback.print_exc()
 
