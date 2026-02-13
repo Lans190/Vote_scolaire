@@ -65,33 +65,8 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 
 db = SQLAlchemy(app)
 
-# ==================== FORCE LA CRÉATION DES TABLES ====================
-with app.app_context():
-    try:
-        print("=" * 50)
-        print("🔧 CRÉATION FORCÉE DES TABLES POSTGRESQL")
-        print("=" * 50)
-        
-        # Supprimer les tables existantes (optionnel - à utiliser avec précaution)
-        # db.drop_all()
-        # print("✅ Tables existantes supprimées")
-        
-        # Créer les tables
-        db.create_all()
-        print("✅ Tables créées avec succès !")
-        
-        # Vérifier que les tables existent
-        from sqlalchemy import inspect
-        inspector = inspect(db.engine)
-        tables = inspector.get_table_names()
-        print(f"📊 Tables dans la base : {tables}")
-        
-    except Exception as e:
-        print(f"❌ ERREUR CRITIQUE : {e}")
-        import traceback
-        traceback.print_exc()
-
 # ==================== MODÈLES DE BASE DE DONNÉES ====================
+# LES MODÈLES DOIVENT ÊTRE DÉFINIS AVANT LA CRÉATION DES TABLES
 
 class Election(db.Model):
     __tablename__ = 'election'
@@ -132,95 +107,68 @@ class Vote(db.Model):
         db.UniqueConstraint('election_id', 'professeur_email', name='unique_vote_per_election'),
     )
 
-# ==================== INITIALISATION BASE DE DONNÉES ====================
-
-def init_database():
-    """Initialise la base de données avec des données de test"""
-    with app.app_context():
-        try:
-            print("🔗 Création des tables si elles n'existent pas...")
-            db.create_all()
-            print("✅ Tables vérifiées/créées")
+# ==================== CRÉATION DES TABLES ====================
+with app.app_context():
+    try:
+        print("=" * 50)
+        print("🔧 CRÉATION DES TABLES POSTGRESQL")
+        print("=" * 50)
+        
+        db.create_all()
+        print("✅ Tables créées avec succès !")
+        
+        # Vérification
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        print(f"📊 Tables dans la base : {tables}")
+        
+        # Initialiser les données si nécessaire
+        if not Election.query.first():
+            print("📝 Création de l'élection par défaut...")
+            election = Election(
+                titre="Élection des Délégués Élèves 2026",
+                date_debut=datetime(2026, 2, 10, 0, 0, 0, tzinfo=timezone.utc),
+                date_fin=datetime(2026, 3, 15, 23, 59, 59, tzinfo=timezone.utc),
+                statut='active'
+            )
+            db.session.add(election)
+            db.session.flush()
             
-            # Vérifier si une élection existe déjà
-            election = db.session.get(Election, 1)
-            if not election:
-                election = Election.query.first()
+            # Créer les candidates
+            candidates_data = [
+                ('Diallo', 'Binta', '3ème', 'Candidate sérieuse et impliquée'),
+                ('Ngom', 'Maguette', '6ème', 'Dynamique et à l\'écoute'),
+                ('Gomis', 'Eléna Nafissatou', '5ème', 'Responsable et organisée'),
+                ('Séne', 'Diasse', '2nde', 'Créative et motivante'),
+                ('Ndong', 'Ndeye Fatou', '4ème', 'Sait communiquer et représenter')
+            ]
             
-            if not election:
-                print("📝 Création de l'élection par défaut...")
-                election = Election(
-                    titre="Élection des Délégués Élèves 2026",
-                    date_debut=datetime(2026, 2, 10, 0, 0, 0, tzinfo=timezone.utc),
-                    date_fin=datetime(2026, 3, 15, 23, 59, 59, tzinfo=timezone.utc),
-                    statut='active'
+            for nom, prenom, classe, description in candidates_data:
+                candidate = Candidate(
+                    nom=nom,
+                    prenom=prenom,
+                    classe=classe,
+                    description=description,
+                    election_id=election.id,
+                    votes_count=0
                 )
-                db.session.add(election)
-                db.session.flush()
-                
-                # Créer les candidates
-                candidates_data = [
-                    ('Diallo', 'Binta', '3ème', 'Candidate sérieuse et impliquée'),
-                    ('Ngom', 'Maguette', '6ème', 'Dynamique et à l\'écoute'),
-                    ('Gomis', 'Eléna Nafissatou', '5ème', 'Responsable et organisée'),
-                    ('Séne', 'Diasse', '2nde', 'Créative et motivante'),
-                    ('Ndong', 'Ndeye Fatou', '4ème', 'Sait communiquer et représenter')
-                ]
-                
-                for nom, prenom, classe, description in candidates_data:
-                    candidate = Candidate(
-                        nom=nom,
-                        prenom=prenom,
-                        classe=classe,
-                        description=description,
-                        election_id=election.id,
-                        votes_count=0
-                    )
-                    db.session.add(candidate)
-                
-                db.session.commit()
-                print(f"✅ Élection et {len(candidates_data)} candidates créées")
-            else:
-                print(f"✅ Élection existante: {election.titre}")
-                
-                # Vérifier s'il y a des candidates
-                if Candidate.query.filter_by(election_id=election.id).count() == 0:
-                    print("⚠️  Aucune candidate trouvée, création...")
-                    candidates_data = [
-                        ('Diallo', 'Binta', '3ème', 'Candidate sérieuse et impliquée'),
-                        ('Ngom', 'Maguette', '6ème', 'Dynamique et à l\'écoute'),
-                        ('Gomis', 'Eléna Nafissatou', '5ème', 'Responsable et organisée'),
-                        ('Séne', 'Diasse', '2nde', 'Créative et motivante'),
-                        ('Ndong', 'Ndeye Fatou', '4ème', 'Sait communiquer et représenter')
-                    ]
-                    
-                    for nom, prenom, classe, description in candidates_data:
-                        candidate = Candidate(
-                            nom=nom,
-                            prenom=prenom,
-                            classe=classe,
-                            description=description,
-                            election_id=election.id,
-                            votes_count=0
-                        )
-                        db.session.add(candidate)
-                    
-                    db.session.commit()
-                    print(f"✅ {len(candidates_data)} candidates créées")
+                db.session.add(candidate)
             
-            # Statistiques finales
-            candidates_count = Candidate.query.count()
-            votes_count = Vote.query.count()
-            print(f"📊 État initial: {candidates_count} candidates, {votes_count} votes")
+            db.session.commit()
+            print(f"✅ Élection et {len(candidates_data)} candidates créées")
+        else:
+            print(f"✅ Élection existante")
             
-            return True
+        # Statistiques finales
+        candidates_count = Candidate.query.count()
+        votes_count = Vote.query.count()
+        print(f"📊 État initial: {candidates_count} candidates, {votes_count} votes")
             
-        except Exception as e:
-            print(f"❌ Erreur d'initialisation: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            db.session.rollback()
-            return False
+    except Exception as e:
+        print(f"❌ Erreur lors de la création des tables : {e}")
+        import traceback
+        traceback.print_exc()
 
 # ==================== ROUTES STATIQUES ====================
 
@@ -774,18 +722,6 @@ def fallback_index():
 # ==================== DÉMARRAGE ====================
 
 if __name__ == '__main__':
-    with app.app_context():
-        # Vérifier la connexion DB
-        if DATABASE_URL:
-            try:
-                db.session.execute('SELECT 1')
-                print("✅ Connexion PostgreSQL vérifiée")
-            except Exception as e:
-                print(f"❌ Erreur connexion PostgreSQL: {e}")
-        
-        # Initialiser la base
-        init_database()
-    
     port = int(os.getenv('PORT', 10000))
     print(f"🚀 Serveur démarré sur le port {port}")
     print(f"🌐 http://localhost:{port}")
