@@ -759,7 +759,7 @@
                         </div>
                         <div class="stat-info">
                             <h3>Candidates</h3>
-                            <div class="stat-number" id="totalCandidates">5</div>
+                            <div class="stat-number" id="totalCandidates">4</div>  <!-- ← MODIFIÉ : 5 → 4 -->
                         </div>
                     </div>
                     <p style="color: var(--gray-600); font-size: 0.9rem;">
@@ -826,7 +826,7 @@
                         <p>Annuler le vote d'un utilisateur</p>
                     </div>
 
-                    <!-- ✅ NOUVEAU BOUTON IMPRIMER -->
+                    <!-- ✅ BOUTON IMPRIMER -->
                     <div class="action-card print-action" onclick="imprimerResultats()">
                         <div class="action-icon">
                             <i class="fas fa-print"></i>
@@ -860,7 +860,7 @@
 
                 <!-- BARRE D'OUTILS RÉSULTATS -->
                 <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
-                    <button onclick="rafraichirResultats()" class="btn-login" style="background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <button onclick="rafraichirResultats()" style="background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                         <i class="fas fa-sync-alt"></i>
                         Rafraîchir
                     </button>
@@ -1093,12 +1093,9 @@
             chargerResultats(false);
         }
 
-        // ========== ✅ FONCTION IMPRIMER RÉSULTATS ==========
+        // ========== FONCTION IMPRIMER RÉSULTATS ==========
         function imprimerResultats() {
-            // Créer une nouvelle fenêtre pour l'impression
             const printWindow = window.open('', '_blank');
-            
-            // Récupérer les données actuelles
             const totalVotes = document.getElementById('totalVotes').textContent;
             const dateImpression = new Date().toLocaleString('fr-FR', {
                 day: '2-digit',
@@ -1108,244 +1105,79 @@
                 minute: '2-digit'
             });
             
-            // Générer le contenu HTML pour l'impression
             printWindow.document.write(`
                 <!DOCTYPE html>
                 <html lang="fr">
                 <head>
                     <meta charset="UTF-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>Résultats Élections 2026 - La Source de la Fontaine</title>
+                    <title>Résultats Élections 2026</title>
                     <style>
-                        * {
-                            margin: 0;
-                            padding: 0;
-                            box-sizing: border-box;
-                            font-family: 'Segoe UI', Arial, sans-serif;
-                        }
-                        
-                        body {
-                            padding: 30px;
-                            background: white;
-                            color: #333;
-                        }
-                        
-                        .print-container {
-                            max-width: 1200px;
-                            margin: 0 auto;
-                        }
-                        
-                        .header {
-                            display: flex;
-                            align-items: center;
-                            gap: 20px;
-                            margin-bottom: 30px;
-                            padding-bottom: 20px;
-                            border-bottom: 2px solid #0d47a1;
-                        }
-                        
-                        .logo {
-                            max-width: 100px;
-                            max-height: 100px;
-                        }
-                        
-                        .school-info h1 {
-                            color: #0d47a1;
-                            font-size: 1.8rem;
-                            margin-bottom: 5px;
-                        }
-                        
-                        .school-info p {
-                            color: #666;
-                            font-size: 1rem;
-                        }
-                        
-                        .election-title {
-                            background: #f5f7fa;
-                            padding: 20px;
-                            border-radius: 10px;
-                            margin-bottom: 30px;
-                            border-left: 5px solid #0d47a1;
-                        }
-                        
-                        .stats-grid {
-                            display: grid;
-                            grid-template-columns: repeat(3, 1fr);
-                            gap: 20px;
-                            margin-bottom: 30px;
-                        }
-                        
-                        .stat-card {
-                            background: #f8f9fa;
-                            padding: 20px;
-                            border-radius: 8px;
-                            text-align: center;
-                        }
-                        
-                        .stat-value {
-                            font-size: 2.5rem;
-                            font-weight: bold;
-                            color: #0d47a1;
-                        }
-                        
-                        table {
-                            width: 100%;
-                            border-collapse: collapse;
-                            margin: 30px 0;
-                        }
-                        
-                        th {
-                            background: #0d47a1;
-                            color: white;
-                            padding: 12px;
-                            text-align: left;
-                        }
-                        
-                        td {
-                            padding: 12px;
-                            border-bottom: 1px solid #ddd;
-                        }
-                        
-                        .rank-1 {
-                            background: #fff9c4;
-                        }
-                        
-                        .footer {
-                            margin-top: 50px;
-                            padding-top: 20px;
-                            border-top: 1px solid #ddd;
-                            text-align: center;
-                            color: #666;
-                            font-size: 0.9rem;
-                        }
-                        
-                        .print-button {
-                            display: none;
-                        }
-                        
-                        @media print {
-                            .print-button { display: none; }
-                            body { padding: 0; }
-                        }
+                        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Arial,sans-serif; }
+                        body { padding:30px; background:white; color:#333; }
+                        .print-container { max-width:1200px; margin:0 auto; }
+                        .header { display:flex; align-items:center; gap:20px; margin-bottom:30px; padding-bottom:20px; border-bottom:2px solid #0d47a1; }
+                        .logo { max-width:100px; max-height:100px; }
+                        .school-info h1 { color:#0d47a1; font-size:1.8rem; margin-bottom:5px; }
+                        .school-info p { color:#666; font-size:1rem; }
+                        .election-title { background:#f5f7fa; padding:20px; border-radius:10px; margin-bottom:30px; border-left:5px solid #0d47a1; }
+                        .stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-bottom:30px; }
+                        .stat-card { background:#f8f9fa; padding:20px; border-radius:8px; text-align:center; }
+                        .stat-value { font-size:2.5rem; font-weight:bold; color:#0d47a1; }
+                        table { width:100%; border-collapse:collapse; margin:30px 0; }
+                        th { background:#0d47a1; color:white; padding:12px; text-align:left; }
+                        td { padding:12px; border-bottom:1px solid #ddd; }
+                        .rank-1 { background:#fff9c4; }
+                        .footer { margin-top:50px; padding-top:20px; border-top:1px solid #ddd; text-align:center; color:#666; font-size:0.9rem; }
                     </style>
-                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
                 </head>
                 <body>
                     <div class="print-container">
-                        <!-- HEADER AVEC LOGO -->
                         <div class="header">
-                            <img src="/assets/fontaine.png" alt="Logo La Source de la Fontaine" class="logo">
+                            <img src="/assets/fontaine.png" alt="Logo" class="logo">
                             <div class="school-info">
                                 <h1>Cours privés La Source de la Fontaine</h1>
                                 <p>Élection des Délégués Élèves 2026</p>
                             </div>
                         </div>
-                        
-                        <!-- TITRE ÉLECTION -->
                         <div class="election-title">
-                            <h2 style="color: #0d47a1; margin-bottom: 10px;">
-                                📊 RÉSULTATS OFFICIELS
-                            </h2>
-                            <p style="color: #666;">
-                                <i class="fas fa-calendar-alt"></i> Date d'impression : ${dateImpression}
-                            </p>
+                            <h2 style="color:#0d47a1;">📊 RÉSULTATS OFFICIELS</h2>
+                            <p style="color:#666;">📅 Date d'impression : ${dateImpression}</p>
                         </div>
-                        
-                        <!-- STATISTIQUES GLOBALES -->
                         <div class="stats-grid">
-                            <div class="stat-card">
-                                <h3 style="margin-bottom: 10px;">Votes Totaux</h3>
-                                <div class="stat-value">${totalVotes}</div>
-                            </div>
-                            <div class="stat-card">
-                                <h3 style="margin-bottom: 10px;">Candidates</h3>
-                                <div class="stat-value">${document.getElementById('totalCandidates').textContent}</div>
-                            </div>
-                            <div class="stat-card">
-                                <h3 style="margin-bottom: 10px;">Participation</h3>
-                                <div class="stat-value">${document.getElementById('participationRate').textContent}</div>
-                            </div>
+                            <div class="stat-card"><h3>Votes Totaux</h3><div class="stat-value">${totalVotes}</div></div>
+                            <div class="stat-card"><h3>Candidates</h3><div class="stat-value">4</div></div>
+                            <div class="stat-card"><h3>Participation</h3><div class="stat-value">${document.getElementById('participationRate').textContent}</div></div>
                         </div>
-                        
-                        <!-- TABLEAU DES RÉSULTATS -->
-                        <h3 style="color: #0d47a1; margin-bottom: 20px;">
-                            <i class="fas fa-poll"></i> Classement des candidates
-                        </h3>
-                        
+                        <h3 style="color:#0d47a1; margin-bottom:20px;">📊 Classement des candidates</h3>
                         <table>
-                            <thead>
-                                <tr>
-                                    <th>Rang</th>
-                                    <th>Candidate</th>
-                                    <th>Classe</th>
-                                    <th>Votes</th>
-                                    <th>Pourcentage</th>
-                                </tr>
-                            </thead>
+                            <thead><tr><th>Rang</th><th>Candidate</th><th>Classe</th><th>Votes</th><th>%</th></tr></thead>
                             <tbody>
                                 ${(() => {
                                     if (!resultsData || !resultsData.results) return '<tr><td colspan="5">Aucun résultat</td></tr>';
                                     return resultsData.results.map(result => `
                                         <tr class="${result.rank === 1 ? 'rank-1' : ''}">
-                                            <td style="font-weight: bold;">${result.rank === 1 ? '🥇 1er' : result.rank === 2 ? '🥈 2ème' : result.rank === 3 ? '🥉 3ème' : result.rank + 'ème'}</td>
-                                            <td><strong>${result.nom_complet || result.nom + ' ' + result.prenom}</strong></td>
-                                            <td>${result.classe || 'N/A'}</td>
-                                            <td style="font-weight: bold; color: #0d47a1;">${result.votes || 0}</td>
-                                            <td>${result.percentage || 0}%</td>
+                                            <td><strong>${result.rank === 1 ? '🥇 1er' : result.rank === 2 ? '🥈 2ème' : result.rank === 3 ? '🥉 3ème' : '#'+result.rank}</strong></td>
+                                            <td><strong>${result.nom_complet}</strong></td>
+                                            <td>${result.classe}</td>
+                                            <td style="color:#0d47a1;">${result.votes}</td>
+                                            <td>${result.percentage}%</td>
                                         </tr>
                                     `).join('');
                                 })()}
                             </tbody>
                         </table>
-                        
-                        <!-- RÉCAPITULATIF -->
-                        <div style="background: #f5f7fa; padding: 20px; border-radius: 8px; margin-top: 30px;">
-                            <p style="margin-bottom: 10px;">
-                                <i class="fas fa-check-circle" style="color: #2e7d32;"></i> 
-                                <strong>Total des votants :</strong> ${totalVotes} professeurs
-                            </p>
-                            <p>
-                                <i class="fas fa-shield-alt" style="color: #0d47a1;"></i> 
-                                <strong>Scrutin sécurisé :</strong> Vote électronique anonyme
-                            </p>
-                        </div>
-                        
-                        <!-- FOOTER -->
-                        <div class="footer">
-                            <p>© 2026 - Cours privés La Source de la Fontaine</p>
-                            <p style="margin-top: 5px;">Document généré automatiquement - Élections des Délégués Élèves</p>
-                        </div>
-                        
-                        <!-- BOUTON IMPRIMER (UNIQUEMENT DANS LA FENÊTRE) -->
-                        <div style="text-align: center; margin-top: 30px;" class="print-button">
-                            <button onclick="window.print(); window.close();" 
-                                    style="background: #0d47a1; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 1.1rem; cursor: pointer;">
-                                <i class="fas fa-print"></i> Imprimer le document
-                            </button>
-                        </div>
-                        
-                        <script>
-                            // Imprimer automatiquement après chargement
-                            window.onload = function() {
-                                // Petit délai pour le chargement des images
-                                setTimeout(() => {
-                                    window.print();
-                                    // Ne pas fermer immédiatement pour permettre l'aperçu
-                                    // window.close();
-                                }, 500);
-                            };
-                        <\/script>
+                        <div class="footer">© 2026 - La Source de la Fontaine</div>
                     </div>
                 </body>
                 </html>
             `);
-            
             printWindow.document.close();
         }
 
         // ========== VOIR RÉSULTATS DÉTAILLÉS ==========
         function voirResultats() {
-            imprimerResultats(); // Ou ouvrir une vue détaillée
+            imprimerResultats();
         }
 
         // ========== VOIR STATISTIQUES ==========
@@ -1353,42 +1185,23 @@
             try {
                 const response = await fetch('/api/stats?admin_secret=admin2026');
                 const data = await response.json();
+                if (data.error) { showError(data.error); return; }
                 
-                if (data.error) {
-                    showError(data.error);
-                    return;
-                }
-                
-                // Afficher dans une modale ou nouvelle fenêtre
                 const statsWindow = window.open('', '_blank');
                 statsWindow.document.write(`
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <title>Statistiques Avancées - Élections 2026</title>
-                        <style>
-                            body { font-family: Arial; padding: 30px; background: #f5f7fa; }
-                            .container { max-width: 800px; margin: 0 auto; }
-                            h1 { color: #0d47a1; }
-                            .stat-item { background: white; padding: 20px; margin: 15px 0; border-radius: 10px; border-left: 5px solid #0d47a1; }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="container">
-                            <h1>📊 Statistiques Avancées</h1>
-                            <div class="stat-item">
-                                <h3>Total des votes</h3>
-                                <p style="font-size: 2rem; color: #0d47a1;">${data.total_votes || 0}</p>
-                            </div>
-                            <div class="stat-item">
-                                <h3>Derniers votants</h3>
-                                ${data.recent_voters ? data.recent_voters.map(v => `
-                                    <p>${v.email} - ${v.candidate_nom} (${new Date(v.date_vote).toLocaleString('fr-FR')})</p>
-                                `).join('') : '<p>Aucun vote récent</p>'}
-                            </div>
+                    <html><head><title>Statistiques</title><style>
+                        body{font-family:Arial;padding:30px;background:#f5f7fa;}
+                        .container{max-width:800px;margin:0 auto;}
+                        h1{color:#0d47a1;}
+                        .stat-item{background:white;padding:20px;margin:15px 0;border-radius:10px;border-left:5px solid #0d47a1;}
+                    </style></head>
+                    <body><div class="container">
+                        <h1>📊 Statistiques Avancées</h1>
+                        <div class="stat-item"><h3>Total des votes</h3><p style="font-size:2rem;color:#0d47a1;">${data.total_votes || 0}</p></div>
+                        <div class="stat-item"><h3>Derniers votants</h3>
+                        ${data.recent_voters ? data.recent_voters.map(v => `<p>${v.email} - ${v.candidate_nom} (${new Date(v.date_vote).toLocaleString('fr-FR')})</p>`).join('') : '<p>Aucun vote récent</p>'}
                         </div>
-                    </body>
-                    </html>
+                    </div></body></html>
                 `);
             } catch (error) {
                 showError('Erreur chargement statistiques');
@@ -1407,11 +1220,7 @@
 
         async function extendElection() {
             const days = document.getElementById('extendDays').value;
-            
-            if (!days || days < 1) {
-                showError('Veuillez entrer un nombre de jours valide');
-                return;
-            }
+            if (!days || days < 1) { showError('Nombre de jours valide requis'); return; }
 
             try {
                 const response = await fetch('/api/admin/extend-election?admin_secret=admin2026', {
@@ -1419,7 +1228,6 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ days: parseInt(days) })
                 });
-
                 const data = await response.json();
 
                 if (data.success) {
@@ -1427,7 +1235,7 @@
                     closeExtendModal();
                     chargerStatsElection();
                 } else {
-                    showError(data.error || 'Erreur lors de la prolongation');
+                    showError(data.error || 'Erreur prolongation');
                 }
             } catch (error) {
                 showError('Erreur de connexion');
@@ -1437,9 +1245,7 @@
         // ========== MODAL RÉINITIALISER UN VOTE ==========
         function openResetModal() {
             document.getElementById('resetModal').style.display = 'flex';
-            setTimeout(() => {
-                document.getElementById('resetEmail').focus();
-            }, 100);
+            setTimeout(() => document.getElementById('resetEmail').focus(), 100);
         }
 
         function closeResetModal() {
@@ -1449,11 +1255,7 @@
 
         async function resetUserVote() {
             const email = document.getElementById('resetEmail').value.trim();
-            
-            if (!email || !email.includes('@')) {
-                showError('Email invalide');
-                return;
-            }
+            if (!email || !email.includes('@')) { showError('Email invalide'); return; }
 
             try {
                 const response = await fetch('/api/admin/reset-user?admin_secret=admin2026', {
@@ -1461,7 +1263,6 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email })
                 });
-
                 const data = await response.json();
 
                 if (data.success) {
@@ -1482,9 +1283,7 @@
             document.getElementById('confirmText').addEventListener('input', function(e) {
                 document.getElementById('resetAllBtn').disabled = e.target.value !== 'CONFIRMER';
             });
-            setTimeout(() => {
-                document.getElementById('confirmText').focus();
-            }, 100);
+            setTimeout(() => document.getElementById('confirmText').focus(), 100);
         }
 
         function closeFullResetModal() {
@@ -1495,10 +1294,7 @@
 
         async function resetAllVotes() {
             try {
-                const response = await fetch('/api/admin/reset-votes?admin_secret=admin2026', {
-                    method: 'POST'
-                });
-
+                const response = await fetch('/api/admin/reset-votes?admin_secret=admin2026', { method: 'POST' });
                 const data = await response.json();
 
                 if (data.success) {
@@ -1525,25 +1321,19 @@
             const alert = document.getElementById('successAlert');
             document.getElementById('successMessage').textContent = message;
             alert.style.display = 'flex';
-            setTimeout(() => {
-                alert.style.display = 'none';
-            }, 5000);
+            setTimeout(() => alert.style.display = 'none', 5000);
         }
 
         function showError(message) {
             const alert = document.getElementById('errorAlert');
             document.getElementById('errorMessage').textContent = message;
             alert.style.display = 'flex';
-            setTimeout(() => {
-                alert.style.display = 'none';
-            }, 5000);
+            setTimeout(() => alert.style.display = 'none', 5000);
         }
 
         // ========== NETTOYAGE ==========
         window.addEventListener('beforeunload', function() {
-            if (refreshInterval) {
-                clearInterval(refreshInterval);
-            }
+            if (refreshInterval) clearInterval(refreshInterval);
         });
     </script>
 </body>

@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory, redirect
+from flask import Flask, request, jsonify, send_from_directory, redirect, send_file
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta, timezone
@@ -13,6 +13,7 @@ load_dotenv()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 FRONTEND_PATH = os.path.join(PROJECT_ROOT, 'front')
+STATIC_PATH = os.path.join(BASE_DIR, 'static')
 
 print("=" * 80)
 print("🚀 SYSTÈME DE VOTE SCOLAIRE 2026 - BACKEND FLASK")
@@ -128,8 +129,8 @@ with app.app_context():
             print("📝 Création de l'élection par défaut...")
             election = Election(
                 titre="Élection des Délégués Élèves 2026",
-                date_debut=datetime(2026, 2, 10, 0, 0, 0, tzinfo=timezone.utc),
-                date_fin=datetime(2026, 3, 15, 23, 59, 59, tzinfo=timezone.utc),
+                date_debut=datetime(2026, 2, 16, 0, 0, 0, tzinfo=timezone.utc),
+                date_fin=datetime(2026, 2, 17, 23, 59, 59, tzinfo=timezone.utc),  # ← MODIFIÉ ICI
                 statut='active'
             )
             db.session.add(election)
@@ -137,7 +138,6 @@ with app.app_context():
             
             # Créer les candidates
             candidates_data = [
-                ('Diallo', 'Binta', '3ème', 'Candidate sérieuse et impliquée'),
                 ('Ngom', 'Maguette', '6ème', 'Dynamique et à l\'écoute'),
                 ('Gomis', 'Eléna Nafissatou', '5ème', 'Responsable et organisée'),
                 ('Séne', 'Diasse', '2nde', 'Créative et motivante'),
@@ -218,6 +218,17 @@ def admin_dashboard():
         return send_from_directory(FRONTEND_PATH, 'admin-dashboard.html')
     except:
         return "Tableau de bord admin - Interface non trouvée"
+
+# ==================== ROUTE POUR LES IMAGES DES CANDIDATES ====================
+@app.route('/static/candidates/<path:filename>')
+def serve_candidate_image(filename):
+    """Sert les images des candidates depuis le dossier static/candidates"""
+    try:
+        candidates_images_path = os.path.join(STATIC_PATH, 'candidates')
+        return send_from_directory(candidates_images_path, filename)
+    except Exception as e:
+        print(f"❌ Erreur chargement image candidate: {e}")
+        return '', 404
 
 @app.route('/<path:path>')
 def serve_static(path):

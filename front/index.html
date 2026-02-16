@@ -233,58 +233,107 @@
 
         .candidates-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(min(100%, 600px), 1fr));
             gap: clamp(16px, 3vw, 24px);
         }
 
         .candidate-card {
             background: white;
             border-radius: var(--border-radius);
-            padding: clamp(20px, 4vw, 28px);
+            padding: 20px;
             box-shadow: var(--shadow);
             transition: all 0.3s ease;
             border: 2px solid transparent;
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
+            gap: 20px;
         }
 
         .candidate-card:hover {
             border-color: var(--primary);
             transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(13, 71, 161, 0.15);
         }
 
-        .candidate-avatar {
-            width: clamp(60px, 12vw, 80px);
-            height: clamp(60px, 12vw, 80px);
-            border-radius: 50%;
+        /* Image carrée à gauche */
+        .candidate-image-wrapper {
+            flex: 0 0 150px;
+            height: 150px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: linear-gradient(135deg, var(--primary-light), var(--primary-dark));
+        }
+
+        .candidate-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+
+        .candidate-card:hover .candidate-image {
+            transform: scale(1.05);
+        }
+
+        /* Fallback si image manquante */
+        .candidate-image-fallback {
+            width: 100%;
+            height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: clamp(1.5rem, 4vw, 2rem);
-            font-weight: bold;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
             color: white;
-            margin-bottom: 16px;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        /* Description à droite */
+        .candidate-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
 
         .candidate-name {
-            font-size: clamp(1.2rem, 4vw, 1.4rem);
+            font-size: 1.5rem;
             font-weight: 700;
-            color: var(--gray-900);
-            margin-bottom: 4px;
+            color: var(--primary);
+            margin-bottom: 5px;
         }
 
         .candidate-class {
             color: var(--primary);
             font-weight: 600;
-            margin-bottom: 12px;
-            font-size: clamp(0.95rem, 3vw, 1.1rem);
+            margin-bottom: 10px;
         }
 
         .candidate-desc {
             color: var(--gray-600);
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             line-height: 1.5;
-            flex-grow: 1;
+        }
+
+        .vote-btn {
+            align-self: flex-start;
+            padding: 12px 24px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .vote-btn:hover {
+            background: var(--primary-light);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(13, 71, 161, 0.3);
         }
 
         /* ========== CONFIRMATION ========== */
@@ -306,7 +355,7 @@
             flex-wrap: wrap;
         }
 
-        /* ========== ✅ LIEN ADMIN (VISIBLE EN BAS) ========== */
+        /* ========== LIEN ADMIN ========== */
         .admin-footer {
             margin-top: 50px;
             padding: 20px;
@@ -339,10 +388,6 @@
             box-shadow: 0 6px 16px rgba(13, 71, 161, 0.2);
         }
 
-        .admin-link i {
-            font-size: 1.1rem;
-        }
-
         /* ========== MESSAGES ========== */
         .message {
             padding: 16px;
@@ -372,6 +417,22 @@
 
         /* ========== RESPONSIVE ========== */
         @media (max-width: 768px) {
+            .candidate-card {
+                flex-direction: column;
+            }
+            
+            .candidate-image-wrapper {
+                flex: 0 0 auto;
+                width: 100%;
+                height: auto;
+                aspect-ratio: 1 / 1;
+            }
+            
+            .vote-btn {
+                align-self: stretch;
+                justify-content: center;
+            }
+            
             .hero {
                 flex-direction: column;
                 text-align: center;
@@ -383,15 +444,6 @@
             
             .btn {
                 width: 100%;
-            }
-            
-            .candidate-card {
-                text-align: center;
-            }
-            
-            .candidate-avatar {
-                margin-left: auto;
-                margin-right: auto;
             }
             
             .admin-link {
@@ -518,7 +570,7 @@
                 </p>
             </div>
 
-            <!-- ✅ LIEN ADMIN VISIBLE ICI - TOUT EN BAS -->
+            <!-- LIEN ADMIN -->
             <div class="admin-footer">
                 <a href="/admin-login" class="admin-link">
                     <i class="fas fa-shield-alt"></i>
@@ -576,21 +628,34 @@
                     return;
                 }
                 
-                container.innerHTML = data.candidates.map((candidate, index) => `
-                    <div class="candidate-card fade-in">
-                        <div class="candidate-avatar" 
-                             style="background: ${AVATAR_COLORS[index % AVATAR_COLORS.length]}">
-                            ${candidate.initials || candidate.prenom[0] + candidate.nom[0]}
+                container.innerHTML = data.candidates.map((candidate, index) => {
+                    // Construction du chemin d'image
+                    const imageUrl = `/static/candidates/${candidate.id}.jpeg`;
+                    
+                    return `
+                        <div class="candidate-card">
+                            <!-- Image carrée à gauche -->
+                            <div class="candidate-image-wrapper">
+                                <img src="${imageUrl}" 
+                                     alt="${candidate.nom_complet}"
+                                     class="candidate-image"
+                                     onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'candidate-image-fallback\\'>${candidate.initials}</div>';">
+                            </div>
+                            
+                            <!-- Description à droite -->
+                            <div class="candidate-info">
+                                <div>
+                                    <h3 class="candidate-name">${candidate.nom_complet}</h3>
+                                    <p class="candidate-class">${candidate.classe}</p>
+                                    <p class="candidate-desc">${candidate.description || 'Candidate pour les élections 2026'}</p>
+                                </div>
+                                <button onclick="voter(${candidate.id})" class="vote-btn">
+                                    <i class="fas fa-vote-yea"></i> Voter pour cette candidate
+                                </button>
+                            </div>
                         </div>
-                        <h3 class="candidate-name">${candidate.nom_complet || candidate.prenom + ' ' + candidate.nom}</h3>
-                        <p class="candidate-class">${candidate.classe}</p>
-                        <p class="candidate-desc">${candidate.description || 'Candidate pour les élections 2026'}</p>
-                        <button onclick="voter(${candidate.id})" class="btn btn-primary">
-                            <i class="fas fa-vote-yea"></i>
-                            Voter pour cette candidate
-                        </button>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
                 
             } catch (error) {
                 console.error('Erreur chargement candidates:', error);
@@ -681,7 +746,7 @@
                     document.getElementById('confirmationSection').classList.remove('hidden');
                     document.getElementById('candidatesSection').classList.add('hidden');
                     chargerStatistiques();
-                    confirmationDiv.scrollIntoView({ behavior: 'smooth' });
+                    document.getElementById('confirmationSection').scrollIntoView({ behavior: 'smooth' });
                 } else {
                     alert('Erreur : ' + (data.error || 'Impossible d\'enregistrer le vote'));
                 }
