@@ -130,7 +130,7 @@ with app.app_context():
             election = Election(
                 titre="Élection des Délégués Élèves 2026",
                 date_debut=datetime(2026, 2, 16, 0, 0, 0, tzinfo=timezone.utc),
-                date_fin=datetime(2026, 2, 17, 23, 59, 59, tzinfo=timezone.utc),  # ← MODIFIÉ ICI
+                date_fin=datetime(2026, 2, 17, 23, 59, 59, tzinfo=timezone.utc),
                 statut='active'
             )
             db.session.add(election)

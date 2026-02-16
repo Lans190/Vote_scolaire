@@ -759,7 +759,7 @@
                         </div>
                         <div class="stat-info">
                             <h3>Candidates</h3>
-                            <div class="stat-number" id="totalCandidates">4</div>  <!-- ← MODIFIÉ : 5 → 4 -->
+                            <div class="stat-number" id="totalCandidates">4</div>
                         </div>
                     </div>
                     <p style="color: var(--gray-600); font-size: 0.9rem;">
@@ -826,7 +826,7 @@
                         <p>Annuler le vote d'un utilisateur</p>
                     </div>
 
-                    <!-- ✅ BOUTON IMPRIMER -->
+                    <!-- BOUTON IMPRIMER CORRIGÉ -->
                     <div class="action-card print-action" onclick="imprimerResultats()">
                         <div class="action-icon">
                             <i class="fas fa-print"></i>
@@ -992,7 +992,7 @@
             
             // Rafraîchir toutes les 30 secondes
             refreshInterval = setInterval(() => {
-                chargerResultats(true); // true = silencieux
+                chargerResultats(true);
             }, 30000);
         });
 
@@ -1010,18 +1010,14 @@
                 const data = await response.json();
                 resultsData = data;
                 
-                // Mettre à jour l'affichage
                 document.getElementById('totalVotes').textContent = data.total_votes || 0;
                 document.getElementById('totalVotesFooter').textContent = data.total_votes || 0;
                 
-                // Calculer taux participation
                 const participation = Math.min(Math.round((data.total_votes / 50) * 100), 100);
                 document.getElementById('participationRate').textContent = participation + '%';
                 
-                // Afficher les résultats dans le tableau
                 afficherTableauResultats(data.results);
                 
-                // Mettre à jour l'horodatage
                 document.getElementById('lastUpdate').innerHTML = `
                     <i class="fas fa-clock"></i> 
                     ${new Date().toLocaleString('fr-FR')}
@@ -1093,90 +1089,99 @@
             chargerResultats(false);
         }
 
-        // ========== FONCTION IMPRIMER RÉSULTATS ==========
+        // ========== FONCTION IMPRIMER CORRIGÉE ==========
         function imprimerResultats() {
+            if (!resultsData || !resultsData.results) {
+                showError('Aucun résultat à imprimer');
+                return;
+            }
+
             const printWindow = window.open('', '_blank');
-            const totalVotes = document.getElementById('totalVotes').textContent;
+            const totalVotes = resultsData.total_votes || 0;
             const dateImpression = new Date().toLocaleString('fr-FR', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
             });
-            
-            printWindow.document.write(`
+
+            const winner = resultsData.results[0];
+            const winnerText = winner ? `${winner.nom_complet} (${winner.votes} votes)` : 'Aucun';
+
+            const printContent = `
                 <!DOCTYPE html>
-                <html lang="fr">
+                <html>
                 <head>
                     <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     <title>Résultats Élections 2026</title>
                     <style>
-                        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Arial,sans-serif; }
-                        body { padding:30px; background:white; color:#333; }
-                        .print-container { max-width:1200px; margin:0 auto; }
-                        .header { display:flex; align-items:center; gap:20px; margin-bottom:30px; padding-bottom:20px; border-bottom:2px solid #0d47a1; }
-                        .logo { max-width:100px; max-height:100px; }
-                        .school-info h1 { color:#0d47a1; font-size:1.8rem; margin-bottom:5px; }
-                        .school-info p { color:#666; font-size:1rem; }
-                        .election-title { background:#f5f7fa; padding:20px; border-radius:10px; margin-bottom:30px; border-left:5px solid #0d47a1; }
-                        .stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-bottom:30px; }
-                        .stat-card { background:#f8f9fa; padding:20px; border-radius:8px; text-align:center; }
-                        .stat-value { font-size:2.5rem; font-weight:bold; color:#0d47a1; }
-                        table { width:100%; border-collapse:collapse; margin:30px 0; }
-                        th { background:#0d47a1; color:white; padding:12px; text-align:left; }
-                        td { padding:12px; border-bottom:1px solid #ddd; }
-                        .rank-1 { background:#fff9c4; }
-                        .footer { margin-top:50px; padding-top:20px; border-top:1px solid #ddd; text-align:center; color:#666; font-size:0.9rem; }
+                        body { font-family: Arial; padding: 30px; }
+                        h1 { color: #0d47a1; border-bottom: 2px solid #0d47a1; padding-bottom: 10px; }
+                        .winner { background: #ffd700; padding: 15px; border-radius: 10px; margin: 20px 0; }
+                        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                        th { background: #0d47a1; color: white; padding: 12px; text-align: left; }
+                        td { padding: 10px; border-bottom: 1px solid #ddd; }
+                        .footer { margin-top: 30px; font-size: 0.9rem; color: #666; text-align: center; }
+                        .rank-1 { font-weight: bold; color: #0d47a1; }
                     </style>
                 </head>
                 <body>
-                    <div class="print-container">
-                        <div class="header">
-                            <img src="/assets/fontaine.png" alt="Logo" class="logo">
-                            <div class="school-info">
-                                <h1>Cours privés La Source de la Fontaine</h1>
-                                <p>Élection des Délégués Élèves 2026</p>
-                            </div>
-                        </div>
-                        <div class="election-title">
-                            <h2 style="color:#0d47a1;">📊 RÉSULTATS OFFICIELS</h2>
-                            <p style="color:#666;">📅 Date d'impression : ${dateImpression}</p>
-                        </div>
-                        <div class="stats-grid">
-                            <div class="stat-card"><h3>Votes Totaux</h3><div class="stat-value">${totalVotes}</div></div>
-                            <div class="stat-card"><h3>Candidates</h3><div class="stat-value">4</div></div>
-                            <div class="stat-card"><h3>Participation</h3><div class="stat-value">${document.getElementById('participationRate').textContent}</div></div>
-                        </div>
-                        <h3 style="color:#0d47a1; margin-bottom:20px;">📊 Classement des candidates</h3>
-                        <table>
-                            <thead><tr><th>Rang</th><th>Candidate</th><th>Classe</th><th>Votes</th><th>%</th></tr></thead>
-                            <tbody>
-                                ${(() => {
-                                    if (!resultsData || !resultsData.results) return '<tr><td colspan="5">Aucun résultat</td></tr>';
-                                    return resultsData.results.map(result => `
-                                        <tr class="${result.rank === 1 ? 'rank-1' : ''}">
-                                            <td><strong>${result.rank === 1 ? '🥇 1er' : result.rank === 2 ? '🥈 2ème' : result.rank === 3 ? '🥉 3ème' : '#'+result.rank}</strong></td>
-                                            <td><strong>${result.nom_complet}</strong></td>
-                                            <td>${result.classe}</td>
-                                            <td style="color:#0d47a1;">${result.votes}</td>
-                                            <td>${result.percentage}%</td>
-                                        </tr>
-                                    `).join('');
-                                })()}
-                            </tbody>
-                        </table>
-                        <div class="footer">© 2026 - La Source de la Fontaine</div>
+                    <h1>🗳️ Résultats Élection des Délégués 2026</h1>
+                    <p>Cours privés La Source de la Fontaine</p>
+                    <p><strong>Date d'impression :</strong> ${dateImpression}</p>
+                    
+                    <div class="winner">
+                        <h2>🏆 Candidate en tête</h2>
+                        <p style="font-size: 1.4rem;">${winnerText}</p>
+                    </div>
+                    
+                    <h2>Classement complet</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Rang</th>
+                                <th>Candidate</th>
+                                <th>Classe</th>
+                                <th>Votes</th>
+                                <th>%</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${resultsData.results.map((r, i) => `
+                                <tr class="${i === 0 ? 'rank-1' : ''}">
+                                    <td><strong>${i === 0 ? '🥇 1er' : i === 1 ? '🥈 2ème' : i === 2 ? '🥉 3ème' : '#' + (i+1)}</strong></td>
+                                    <td><strong>${r.nom_complet}</strong></td>
+                                    <td>${r.classe}</td>
+                                    <td style="color: #0d47a1;">${r.votes}</td>
+                                    <td>${r.percentage}%</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    
+                    <p><strong>Total des votes :</strong> ${totalVotes}</p>
+                    <p><strong>Taux de participation :</strong> ${document.getElementById('participationRate').textContent}</p>
+                    
+                    <div class="footer">
+                        <p>© 2026 - Cours privés La Source de la Fontaine</p>
+                        <p>Document généré automatiquement</p>
                     </div>
                 </body>
                 </html>
-            `);
+            `;
+
+            printWindow.document.write(printContent);
             printWindow.document.close();
+            
+            setTimeout(() => {
+                printWindow.print();
+            }, 500);
         }
 
         // ========== VOIR RÉSULTATS DÉTAILLÉS ==========
         function voirResultats() {
+            if (!resultsData || !resultsData.results) {
+                showError('Aucun résultat à afficher');
+                return;
+            }
             imprimerResultats();
         }
 
